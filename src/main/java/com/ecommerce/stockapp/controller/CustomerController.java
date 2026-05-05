@@ -9,6 +9,7 @@ import com.ecommerce.stockapp.service.OrderService;
 import com.ecommerce.stockapp.service.ProductService;
 import com.ecommerce.stockapp.service.UserService; // On utilise le service plutôt que le DAO direct
 import com.ecommerce.stockapp.view.AppShell;
+import com.ecommerce.stockapp.model.OrderItem;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -87,6 +88,18 @@ public class CustomerController {
 
     public List<Order> orders() {
         return orders.userOrders(currentUser.getId());
+    }
+    
+    public List<OrderItem> getOrderItems(int orderId) {
+        // Cette méthode doit appeler ton OrderService pour récupérer les items
+        return orders.getOrderItems(orderId); 
+    }
+    public Product getProductById(int productId) {
+        // On demande au service de trouver le produit par son ID
+        return products.products("").stream()
+                .filter(p -> p.getId() == productId)
+                .findFirst()
+                .orElse(null);
     }
 
     public void setAppShell(AppShell appShell) {

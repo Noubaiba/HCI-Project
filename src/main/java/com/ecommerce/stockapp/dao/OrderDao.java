@@ -8,6 +8,8 @@ import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import com.ecommerce.stockapp.model.OrderItem;
+
 
 public class OrderDao {
     private final Database database;
@@ -60,6 +62,37 @@ public class OrderDao {
 
     public Database getDatabase() {
         return database;
+    }
+    public List<OrderItem> findItemsByOrderId(int orderId) {
+        List<OrderItem> items = new ArrayList<>();
+        
+        // Correction des noms de tables (ajout des 's')
+        String sql = "SELECT oi.*, p.name FROM order_items oi " + 
+                     "JOIN products p ON oi.product_id = p.id " +
+                     "WHERE oi.order_id = ?";
+        
+        try (Connection conn = database.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, orderId);
+            ResultSet rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                items.add(new OrderItem(
+                    rs.getInt("id"),
+                    rs.getInt("product_id"),
+                    rs.getString("name"), 
+                    rs.getInt("quantity"),
+                    rs.getBigDecimal("price")
+                ));
+            }
+        } catch (SQLException e) {
+            // TRÈS IMPORTANT : Si ça ne marche toujours pas, 
+            // regarde l'erreur exacte ici dans ta console !
+            System.err.println("Erreur SQL dans findItemsByOrderId : " + e.getMessage());
+            e.printStackTrace();
+        }
+        return items;
     }
 
     private List<Order> find(String sql, int userId) {

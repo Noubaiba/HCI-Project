@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import com.ecommerce.stockapp.model.OrderItem;
 
 public class OrderService {
     private final OrderDao orderDao;
@@ -70,4 +71,9 @@ public class OrderService {
         orderDao.updateStatus(order.getId(), status);
         logs.log(userId, "UPDATE_ORDER_STATUS", "Order #" + order.getId() + " -> " + status);
     }
+    public List<OrderItem> getOrderItems(int orderId) {
+        // Logique pour récupérer les items (produit, quantité, prix) depuis la table order_item
+        return orderDao.findItemsByOrderId(orderId);
+    }
+    
 }
