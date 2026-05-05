@@ -101,57 +101,186 @@ public class CustomerDashboardView {
     }
 
     private VBox productCard(Product product) {
-        // --- Design "Amazon" de ta collègue ---
+        // 1. Visuel sans marges
         StackPane visual = productVisual(product);
-        visual.setStyle("-fx-background-color: #F7F7F7; -fx-background-radius: 8;");
+
+        // 2. Conteneur pour le texte (lui a besoin de padding)
+        VBox detailsBox = new VBox(8);
+        detailsBox.setPadding(new Insets(10)); // On met le padding ICI, pas sur la carte entière
 
         Label name = new Label(product.getName());
-        name.setStyle("-fx-font-size: 13; -fx-font-weight: bold;");
+        name.setStyle("-fx-font-size: 13; -fx-text-fill: #333; -fx-font-family: 'Arial';");
         name.setWrapText(true);
-        name.setMinHeight(35);
+        name.setPrefHeight(35);
 
-        // Formatage du prix (MAD)
         BigDecimal priceVal = product.getPrice() != null ? product.getPrice() : BigDecimal.ZERO;
-        Label priceLabel = new Label(priceVal + " MAD");
-        priceLabel.setStyle("-fx-font-size: 16; -fx-text-fill: #B12704; -fx-font-weight: bold;");
+        Label priceLabel = new Label(priceVal + " €");
+        priceLabel.setStyle("-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #000;");
 
-        Label stockInfo = new Label(product.getQuantity() > 0 ? "In Stock (" + product.getQuantity() + ")" : "Out of stock");
-        stockInfo.setStyle("-fx-font-size: 11; -fx-text-fill: " + (product.getQuantity() > 0 ? "#007600" : "#B12704"));
-
-        Spinner<Integer> qty = new Spinner<>(1, Math.max(1, product.getQuantity()), 1);
-        qty.setMaxWidth(80);
-
-        Button add = new Button("Add to cart");
-        add.setMaxWidth(Double.MAX_VALUE);
-        add.setDisable(product.getQuantity() <= 0);
-        add.setStyle("-fx-background-color: #2D8E2D; -fx-text-fill: white; -fx-background-radius: 15;");
+        // Bouton panier à côté du prix
+        ImageView addIcon = new ImageView(new Image(getClass().getResource("/images/icons/addtocart.png").toExternalForm()));
+        addIcon.setFitWidth(24); addIcon.setFitHeight(24);
+        addIcon.setCursor(javafx.scene.Cursor.HAND);
         
-        add.setOnAction(e -> run(() -> {
-            controller.addToCart(product, qty.getValue());
-            shell.updateCartCount(controller.cart().size());
-        }));
+//        addIcon.setOnMouseClicked(e -> {
+//            if (product.getQuantity() > 0) {
+//                run(() -> {
+//                    controller.addToCart(product, 1);
+//                    shell.updateCartCount(controller.cart().size());
+//                });
+//            }
+//        });
+        addIcon.setOnMouseClicked(e -> showProductDetails(product));
 
-        VBox card = new VBox(8, visual, name, priceLabel, stockInfo, new Label("Qty:"), qty, add);
-        card.setPadding(new Insets(10));
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox priceLine = new HBox(priceLabel, spacer, addIcon);
+        priceLine.setAlignment(Pos.CENTER_LEFT);
+
+        detailsBox.getChildren().addAll(name, priceLine);
+
+        // 3. Assemblage de la carte
+        VBox card = new VBox(0, visual, detailsBox); // Spacing à 0 entre l'image et le texte
         card.setPrefWidth(200);
-        card.setStyle("-fx-background-color: white; -fx-border-color: #DDD; -fx-border-radius: 5;");
+        card.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #eee; -fx-border-radius: 8;");
         
+        // Effet d'ombre au survol
+        card.setOnMouseEntered(e -> card.setEffect(new DropShadow(10, Color.rgb(0,0,0,0.1))));
+        card.setOnMouseExited(e -> card.setEffect(null));
+
         return card;
     }
 
+    
+    private void showProductDetails(Product product) {
+        Stage dialog = new Stage();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.initStyle(StageStyle.TRANSPARENT);
+
+        // Conteneur principal
+        HBox root = new HBox(30);
+        root.setPadding(new Insets(20));
+        root.setStyle("-fx-background-color: white; -fx-background-radius: 10;");
+        root.setEffect(new DropShadow(20, Color.rgb(0, 0, 0, 0.2)));
+        root.setPrefSize(700, 450);
+        root.setAlignment(Pos.CENTER_LEFT);
+
+        // --- GAUCHE : IMAGE ---
+        VBox imageBox = new VBox(10);
+        imageBox.setAlignment(Pos.CENTER);
+        ImageView mainImg = new ImageView();
+        if (product.getImageUrl() != null && !product.getImageUrl().isBlank()) {
+            mainImg.setImage(new Image(resolveImage(product.getImageUrl()), true));
+        }
+        mainImg.setFitWidth(300);
+        mainImg.setFitHeight(380);
+        mainImg.setPreserveRatio(true);
+        imageBox.getChildren().add(mainImg);
+
+        // --- DROITE : INFOS ---
+        VBox infoBox = new VBox(15);
+        infoBox.setPadding(new Insets(10, 0, 0, 0));
+        HBox.setHgrow(infoBox, Priority.ALWAYS);
+
+        // Header
+        HBox header = new HBox();
+        Label title = new Label(product.getName());
+        title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #333;");
+        title.setWrapText(true);
+        title.setMaxWidth(300);
+
+        Region headerSpacer = new Region();
+        HBox.setHgrow(headerSpacer, Priority.ALWAYS);
+        Button btnClose = new Button("✕");
+        btnClose.setStyle("-fx-background-color: transparent; -fx-font-size: 18px; -fx-cursor: hand;");
+        btnClose.setOnAction(e -> dialog.close());
+        header.getChildren().addAll(title, headerSpacer, btnClose);
+
+        // Prix
+        Label price = new Label(product.getPrice() + " MAD");
+        price.setStyle("-fx-font-size: 24px; -fx-font-weight: 800; -fx-text-fill: #000;");
+
+        // --- SÉLECTEUR DE QUANTITÉ PERSONNALISÉ (+ / -) ---
+        Label lblQty = new Label("Quantité(s):");
+        lblQty.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+
+        Label qtyDisplay = new Label("1");
+        qtyDisplay.setPrefWidth(40);
+        qtyDisplay.setAlignment(Pos.CENTER);
+        qtyDisplay.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-border-color: #ddd; -fx-border-width: 1 0 1 0; -fx-min-height: 35;");
+
+        Button btnMinus = new Button("-");
+        btnMinus.setPrefSize(35, 35);
+        btnMinus.setStyle("-fx-background-color: white; -fx-border-color: #ddd; -fx-border-radius: 0; -fx-cursor: hand;");
+        btnMinus.setOnAction(e -> {
+            int current = Integer.parseInt(qtyDisplay.getText());
+            if (current > 1) qtyDisplay.setText(String.valueOf(current - 1));
+        });
+
+        Button btnPlus = new Button("+");
+        btnPlus.setPrefSize(35, 35);
+        btnPlus.setStyle("-fx-background-color: white; -fx-border-color: #ddd; -fx-border-radius: 0; -fx-cursor: hand;");
+        btnPlus.setOnAction(e -> {
+            int current = Integer.parseInt(qtyDisplay.getText());
+            if (current < product.getQuantity()) qtyDisplay.setText(String.valueOf(current + 1));
+        });
+
+        HBox qtySelector = new HBox(0, btnMinus, qtyDisplay, btnPlus);
+        qtySelector.setAlignment(Pos.CENTER_LEFT);
+
+        // Bouton Ajouter
+        Button btnAdd = new Button("AJOUTER AU PANIER");
+        btnAdd.setMaxWidth(Double.MAX_VALUE);
+        btnAdd.setPrefHeight(45);
+        btnAdd.setStyle("-fx-background-color: black; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
+        btnAdd.setOnAction(e -> {
+            int finalQty = Integer.parseInt(qtyDisplay.getText());
+            run(() -> {
+                controller.addToCart(product, finalQty);
+                shell.updateCartCount(controller.cart().size());
+                dialog.close();
+            });
+        });
+
+        Label stock = new Label("Stock disponible: " + product.getQuantity());
+        stock.setStyle("-fx-text-fill: #666; -fx-font-size: 12px;");
+
+        // CRITIQUE : Ici on ajoute bien qtySelector et PAS qtySpinner
+        infoBox.getChildren().addAll(header, price, new Separator(), lblQty, qtySelector, stock, btnAdd);
+
+        root.getChildren().addAll(imageBox, infoBox);
+        Scene scene = new Scene(root);
+        scene.setFill(Color.TRANSPARENT);
+        dialog.setScene(scene);
+        dialog.showAndWait();
+    }
+    
     private StackPane productVisual(Product product) {
         StackPane container = new StackPane();
-        container.setPrefHeight(120);
+        container.setPrefHeight(220); // Hauteur plus grande pour le style SHEIN
+        container.setMaxWidth(Double.MAX_VALUE);
+        
+        // Empêche le StackPane de limiter la taille de l'image
+        container.setStyle("-fx-background-color: #f7f7f7; -fx-background-radius: 8 8 0 0; -fx-overflow: hidden;");
+
         if (product.getImageUrl() != null && !product.getImageUrl().isBlank()) {
             try {
-                ImageView iv = new ImageView(new Image(resolveImage(product.getImageUrl()), true));
-                iv.setFitHeight(100); iv.setFitWidth(150); iv.setPreserveRatio(true);
+                Image img = new Image(resolveImage(product.getImageUrl()), true);
+                ImageView iv = new ImageView(img);
+                
+                // --- CONFIGURATION STYLE SHEIN ---
+                iv.setPreserveRatio(true);
+                // On lie la largeur de l'image à celle du container pour qu'elle prenne toute la place
+                iv.fitWidthProperty().bind(container.widthProperty());
+                iv.setFitHeight(220); 
+                
                 container.getChildren().add(iv);
                 return container;
             } catch (Exception ignored) {}
         }
+        
         Label glyph = new Label(productGlyph(product.getCategoryName()));
-        glyph.setStyle("-fx-font-size: 40;");
+        glyph.setStyle("-fx-font-size: 50;");
         container.getChildren().add(glyph);
         return container;
     }
