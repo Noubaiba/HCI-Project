@@ -59,43 +59,212 @@ public class CustomerDashboardView {
         return shell.render();
     }
 
+//    private void showCatalog() {
+//        // 1. Petit Header Noir (Promo)
+//        Label promoLabel = new Label("LIVRAISON GRATUITE DÈS 39€ D'ACHAT | RETOURS GRATUITS");
+//        promoLabel.setStyle("-fx-background-color: black; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 8px; -fx-font-weight: bold;");
+//        promoLabel.setMaxWidth(Double.MAX_VALUE);
+//        promoLabel.setAlignment(Pos.CENTER);
+//
+//        // 2. Barre de Catégories Horizontale (HBox)
+//        HBox categoryBar = new HBox(30); // Espace entre catégories augmenté à 30
+//        categoryBar.setAlignment(Pos.CENTER_LEFT);
+//        categoryBar.setPadding(new Insets(0, 20, 0, 20));
+//        categoryBar.setStyle("-fx-background-color: white;");
+//
+//        // 3. ScrollPane spécial pour la barre (Fixe en haut, scroll horizontal uniquement)
+//        ScrollPane categoryScroll = new ScrollPane(categoryBar);
+//        categoryScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER); // INTERDIT le scroll haut/bas
+//        categoryScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED); // Autorise gauche/droite
+//        categoryScroll.setFitToHeight(true);
+//        
+//        // ON AUGMENTE LA HAUTEUR ICI (60px au lieu de automatique)
+//        categoryScroll.setMinHeight(60); 
+//        categoryScroll.setPrefHeight(60);
+//        
+//        categoryScroll.setStyle("-fx-background-color: white; -fx-background: white; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
+//
+//        FlowPane grid = new FlowPane(15, 15);
+//        grid.setPadding(new Insets(20));
+//        grid.setAlignment(Pos.TOP_CENTER);
+//
+//        java.util.function.Consumer<String> filterAction = (categoryName) -> {
+//            grid.getChildren().clear();
+//            controller.products("").stream()
+//                    .filter(p -> categoryName.equals("TOUT VOIR") || 
+//                            (p.getCategoryName() != null && p.getCategoryName().equalsIgnoreCase(categoryName)))
+//                    .forEach(product -> grid.getChildren().add(productCard(product)));
+//            
+//            categoryBar.getChildren().forEach(node -> {
+//                if (node instanceof Button b) {
+//                    // FORCE LE TEXTE A S'AFFICHER EN ENTIER
+//                    b.setMinWidth(Region.USE_PREF_SIZE); 
+//                    b.setMinHeight(50); // Boutons plus hauts pour cliquer facilement
+//                    
+//                    if (b.getText().equals(categoryName)) {
+//                        b.setStyle("-fx-background-color: transparent; -fx-font-weight: bold; -fx-text-fill: black; -fx-border-color: black; -fx-border-width: 0 0 3 0; -fx-cursor: hand;");
+//                    } else {
+//                        b.setStyle("-fx-background-color: transparent; -fx-font-weight: normal; -fx-text-fill: #666; -fx-cursor: hand; -fx-border-color: transparent;");
+//                    }
+//                }
+//            });
+//        };
+//
+//        // Remplissage
+//        try {
+//            List<String> cats = new java.util.ArrayList<>();
+//            cats.add("TOUT VOIR");
+//            cats.addAll(controller.products("").stream()
+//                    .map(Product::getCategoryName)
+//                    .filter(c -> c != null && !c.isBlank())
+//                    .distinct().map(String::toUpperCase).toList());
+//
+//            for (String catName : cats) {
+//                Button catBtn = new Button(catName);
+//                catBtn.setMinWidth(Region.USE_PREF_SIZE); // Crucial pour éviter les "..."
+//                catBtn.setOnAction(e -> filterAction.accept(catName));
+//                categoryBar.getChildren().add(catBtn);
+//            }
+//        } catch (Exception e) { e.printStackTrace(); }
+//
+//        shell.setSearchHandler(query -> {
+//            grid.getChildren().clear();
+//            controller.products(query).forEach(p -> grid.getChildren().add(productCard(p)));
+//        });
+//
+//        filterAction.accept("TOUT VOIR");
+//
+//        // Scroll principal pour les produits
+//        ScrollPane mainProductScroll = new ScrollPane(grid);
+//        mainProductScroll.setFitToWidth(true);
+//        mainProductScroll.setStyle("-fx-background-color: white; -fx-background: white;");
+//
+//        // L'ASSEMBLAGE : promo + categoryScroll sont en dehors du scroll des produits
+//        // donc ils restent fixes en haut.
+//        VBox layout = new VBox(0, promoLabel, categoryScroll, mainProductScroll);
+//        VBox.setVgrow(mainProductScroll, Priority.ALWAYS);
+//
+//        setContent("Product Catalog", layout);
+//    }
     private void showCatalog() {
-        // --- Système de filtre de ta collègue ---
-        ComboBox<String> categoryCombo = new ComboBox<>();
-        categoryCombo.getItems().add("All Categories");
-        try {
-            categoryCombo.getItems().addAll(controller.products("").stream()
-                    .map(Product::getCategoryName)
-                    .filter(c -> c != null && !c.isBlank())
-                    .distinct().toList());
-        } catch (Exception e) { System.err.println("Error loading categories"); }
-        categoryCombo.setValue("All Categories");
+        // 1. Header promo
+        Label promoLabel = new Label("LIVRAISON GRATUITE DÈS 39€ D'ACHAT | RETOURS GRATUITS");
+        promoLabel.setStyle("-fx-background-color: black; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 8px; -fx-font-weight: bold;");
+        promoLabel.setMaxWidth(Double.MAX_VALUE);
+        promoLabel.setAlignment(Pos.CENTER);
 
+        // 2. Categories bar
+        HBox categoryBar = new HBox(30);
+        categoryBar.setAlignment(Pos.CENTER_LEFT);
+        categoryBar.setPadding(new Insets(0, 20, 0, 20));
+        categoryBar.setStyle("-fx-background-color: white;");
+
+        ScrollPane categoryScroll = new ScrollPane(categoryBar);
+        categoryScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        categoryScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        categoryScroll.setFitToHeight(true);
+        categoryScroll.setPrefHeight(60);
+        categoryScroll.setMinHeight(60);
+        categoryScroll.setStyle("-fx-background-color: white; -fx-background: white; -fx-border-color: #eee; -fx-border-width: 0 0 1 0; -fx-padding: 0;");
+
+        // 3. GRID PRODUITS
         FlowPane grid = new FlowPane(15, 15);
-        grid.setPadding(new Insets(10));
+        grid.setPadding(new Insets(20));
+        grid.setAlignment(Pos.TOP_CENTER);
+        grid.setPrefWrapLength(900);
+        grid.setMaxWidth(Double.MAX_VALUE);
 
-        Runnable reload = () -> {
+        // 🔥 SCROLL CONTAINER (IMPORTANT)
+        ScrollPane mainProductScroll = new ScrollPane(grid);
+        mainProductScroll.setFitToWidth(true);
+        mainProductScroll.setFitToHeight(true);
+
+        // cacher scrollbar MAIS garder scroll
+        mainProductScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        mainProductScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+
+        // permettre scroll touchpad / mouse
+        mainProductScroll.setPannable(true);
+
+        mainProductScroll.setStyle(
+                "-fx-background-color: white;" +
+                "-fx-background: white;" +
+                "-fx-border-color: transparent;"
+        );
+
+        // FILTER LOGIC
+        java.util.function.Consumer<String> filterAction = (categoryName) -> {
             grid.getChildren().clear();
-            String selectedCat = categoryCombo.getValue();
-            controller.products("").stream()
-                    .filter(p -> selectedCat.equals("All Categories") || 
-                            (p.getCategoryName() != null && p.getCategoryName().equals(selectedCat)))
-                    .forEach(product -> grid.getChildren().add(productCard(product)));
+
+            controller.products("")
+                    .stream()
+                    .filter(p -> categoryName.equals("TOUT VOIR") ||
+                            (p.getCategoryName() != null &&
+                                    p.getCategoryName().equalsIgnoreCase(categoryName)))
+                    .forEach(p -> grid.getChildren().add(productCard(p)));
+
+            categoryBar.getChildren().forEach(node -> {
+                if (node instanceof Button b) {
+                    b.setMinWidth(Region.USE_PREF_SIZE);
+                    b.setMinHeight(60);
+
+                    if (b.getText().equals(categoryName)) {
+                        b.setStyle(
+                                "-fx-background-color: transparent;" +
+                                "-fx-font-weight: bold;" +
+                                "-fx-text-fill: black;" +
+                                "-fx-border-color: black;" +
+                                "-fx-border-width: 0 0 3 0;" +
+                                "-fx-cursor: hand;"
+                        );
+                    } else {
+                        b.setStyle(
+                                "-fx-background-color: transparent;" +
+                                "-fx-font-weight: normal;" +
+                                "-fx-text-fill: #666;" +
+                                "-fx-border-color: transparent;" +
+                                "-fx-cursor: hand;"
+                        );
+                    }
+                }
+            });
         };
 
-        categoryCombo.valueProperty().addListener((o, old, val) -> reload.run());
-        
-        // Ton SearchHandler (barre de recherche du header)
+        // CATEGORIES
+        try {
+            List<String> cats = new java.util.ArrayList<>();
+            cats.add("TOUT VOIR");
+
+            cats.addAll(controller.products("")
+                    .stream()
+                    .map(Product::getCategoryName)
+                    .filter(c -> c != null && !c.isBlank())
+                    .distinct()
+                    .map(String::toUpperCase)
+                    .toList());
+
+            for (String catName : cats) {
+                Button catBtn = new Button(catName);
+                catBtn.setMinWidth(Region.USE_PREF_SIZE);
+                catBtn.setOnAction(e -> filterAction.accept(catName));
+                categoryBar.getChildren().add(catBtn);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // SEARCH
         shell.setSearchHandler(query -> {
             grid.getChildren().clear();
-            controller.products(query).forEach(p -> grid.getChildren().add(productCard(p)));
+            controller.products(query)
+                    .forEach(p -> grid.getChildren().add(productCard(p)));
         });
 
-        reload.run();
-        ScrollPane scroll = new ScrollPane(grid);
-        scroll.setFitToWidth(true);
+        filterAction.accept("TOUT VOIR");
 
-        VBox layout = new VBox(15, Ui.toolbar(new Label("Filter by: "), categoryCombo), scroll);
+        // FINAL LAYOUT
+        VBox layout = new VBox(0, promoLabel, categoryScroll, mainProductScroll);
+
         setContent("Product Catalog", layout);
     }
 
@@ -254,33 +423,51 @@ public class CustomerDashboardView {
         dialog.showAndWait();
     }
     
+//    private StackPane productVisual(Product product) {
+//        StackPane container = new StackPane();
+//        container.setPrefHeight(220); // Hauteur plus grande pour le style SHEIN
+//        container.setMaxWidth(Double.MAX_VALUE);
+//        
+//        // Empêche le StackPane de limiter la taille de l'image
+//        container.setStyle("-fx-background-color: #f7f7f7; -fx-background-radius: 8 8 0 0; -fx-overflow: hidden;");
+//
+//        if (product.getImageUrl() != null && !product.getImageUrl().isBlank()) {
+//            try {
+//                Image img = new Image(resolveImage(product.getImageUrl()), true);
+//                ImageView iv = new ImageView(img);
+//                
+//                // --- CONFIGURATION STYLE SHEIN ---
+//                iv.setPreserveRatio(true);
+//                // On lie la largeur de l'image à celle du container pour qu'elle prenne toute la place
+//                iv.fitWidthProperty().bind(container.widthProperty());
+//                iv.setFitHeight(220); 
+//                
+//                container.getChildren().add(iv);
+//                return container;
+//            } catch (Exception ignored) {}
+//        }
+//        
+//        Label glyph = new Label(productGlyph(product.getCategoryName()));
+//        glyph.setStyle("-fx-font-size: 50;");
+//        container.getChildren().add(glyph);
+//        return container;
+//    }
     private StackPane productVisual(Product product) {
         StackPane container = new StackPane();
-        container.setPrefHeight(220); // Hauteur plus grande pour le style SHEIN
-        container.setMaxWidth(Double.MAX_VALUE);
-        
-        // Empêche le StackPane de limiter la taille de l'image
-        container.setStyle("-fx-background-color: #f7f7f7; -fx-background-radius: 8 8 0 0; -fx-overflow: hidden;");
+        container.setPrefHeight(220);
+        container.setStyle("-fx-background-color: #f7f7f7;");
 
         if (product.getImageUrl() != null && !product.getImageUrl().isBlank()) {
             try {
-                Image img = new Image(resolveImage(product.getImageUrl()), true);
-                ImageView iv = new ImageView(img);
-                
-                // --- CONFIGURATION STYLE SHEIN ---
+                ImageView iv = new ImageView(new Image(resolveImage(product.getImageUrl()), true));
                 iv.setPreserveRatio(true);
-                // On lie la largeur de l'image à celle du container pour qu'elle prenne toute la place
-                iv.fitWidthProperty().bind(container.widthProperty());
-                iv.setFitHeight(220); 
-                
+                iv.fitWidthProperty().bind(container.widthProperty()); // L'image s'adapte à la largeur
+                iv.setFitHeight(220);
                 container.getChildren().add(iv);
-                return container;
             } catch (Exception ignored) {}
+        } else {
+            container.getChildren().add(new Label("📦"));
         }
-        
-        Label glyph = new Label(productGlyph(product.getCategoryName()));
-        glyph.setStyle("-fx-font-size: 50;");
-        container.getChildren().add(glyph);
         return container;
     }
 
