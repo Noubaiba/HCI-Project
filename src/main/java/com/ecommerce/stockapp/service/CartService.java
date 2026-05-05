@@ -28,6 +28,8 @@ public class CartService {
         cartDao.addOrUpdate(userId, product.getId(), quantity);
     }
 
+
+
     public List<CartItem> items(int userId) { return cartDao.findByUser(userId); }
     public void update(int cartId, int quantity) { cartDao.updateQuantity(cartId, quantity); }
     public void remove(int cartId) { cartDao.remove(cartId); }

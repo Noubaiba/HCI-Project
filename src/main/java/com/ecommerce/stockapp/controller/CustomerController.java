@@ -92,4 +92,14 @@ public class CustomerController {
     public void setAppShell(AppShell appShell) {
         this.appShell = appShell;
     }
+
+    public void removeFromCart(CartItem item) {
+        cart.remove(item.getId());
+    }
+
+    public void updateCartQuantity(CartItem item, int quantity) {
+        cart.update(item.getId(), quantity);
+    }
+
+
 }
