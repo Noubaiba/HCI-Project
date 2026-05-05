@@ -143,6 +143,7 @@ public class AppShell {
         label.getStyleClass().add("shell-section-label");
         return label;
     }
+
     public void setNavItems(List<NavItem> items) {
         this.navBox.getChildren().clear(); // On vide l'ancienne liste
         this.collapsibleNodes.removeIf(node -> node instanceof Label && node.getStyleClass().contains("shell-nav-label")); // Nettoyage
@@ -158,7 +159,6 @@ public class AppShell {
             }
         }
     }
-
 
     private Button navButton(NavItem item) {
         ImageView icon = new ImageView(new Image(getClass().getResource(item.iconPath()).toExternalForm()));
