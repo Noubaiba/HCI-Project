@@ -27,7 +27,12 @@ public class CustomerDashboardView {
     }
 
     public Parent render() {
+        // On injecte les actions (Catalog, Cart, etc.) dans le shell
+        shell.setNavItems(navItems());
+
+        // On affiche le premier écran
         showCatalog();
+
         return shell.render();
     }
 
