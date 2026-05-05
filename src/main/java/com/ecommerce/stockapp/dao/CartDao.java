@@ -14,6 +14,10 @@ public class CartDao {
         this.database = database;
     }
 
+    /**
+     * Ajoute un produit au panier ou met à jour la quantité si le produit existe déjà.
+     * Utilise ON DUPLICATE KEY UPDATE (MySQL).
+     */
     public void addOrUpdate(int userId, int productId, int quantity) {
         String sql = """
                 INSERT INTO cart(user_id, product_id, quantity) VALUES (?, ?, ?)
@@ -30,9 +34,13 @@ public class CartDao {
         }
     }
 
+    /**
+     * Définit une quantité précise pour un item du panier (utilisé dans la vue Panier).
+     */
     public void updateQuantity(int cartId, int quantity) {
+        String sql = "UPDATE cart SET quantity = ? WHERE id = ?";
         try (Connection connection = database.getConnection();
-             PreparedStatement statement = connection.prepareStatement("UPDATE cart SET quantity = ? WHERE id = ?")) {
+             PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, quantity);
             statement.setInt(2, cartId);
             statement.executeUpdate();
@@ -41,6 +49,9 @@ public class CartDao {
         }
     }
 
+    /**
+     * Supprime un article spécifique du panier.
+     */
     public void remove(int cartId) {
         try (Connection connection = database.getConnection();
              PreparedStatement statement = connection.prepareStatement("DELETE FROM cart WHERE id = ?")) {
@@ -51,6 +62,10 @@ public class CartDao {
         }
     }
 
+    /**
+     * Vide totalement le panier d'un utilisateur.
+     * Note: Prend une Connection en paramètre pour être utilisé dans une Transaction (OrderService).
+     */
     public void clear(int userId, Connection connection) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement("DELETE FROM cart WHERE user_id = ?")) {
             statement.setInt(1, userId);
@@ -58,6 +73,10 @@ public class CartDao {
         }
     }
 
+    /**
+     * Récupère tous les articles du panier pour un utilisateur donné,
+     * en joignant les informations du produit et de sa catégorie.
+     */
     public List<CartItem> findByUser(int userId) {
         List<CartItem> items = new ArrayList<>();
         String sql = """
@@ -74,9 +93,15 @@ public class CartDao {
             statement.setInt(1, userId);
             ResultSet rs = statement.executeQuery();
             while (rs.next()) {
+                // On inclut bien rs.getString("image_url") pour que les photos s'affichent dans le panier
                 Product product = new Product(
-                        rs.getInt("id"), rs.getString("name"), rs.getString("description"), rs.getString("image_url"),
-                        rs.getBigDecimal("price"), rs.getInt("quantity"), rs.getInt("category_id"),
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("description"),
+                        rs.getString("image_url"),
+                        rs.getBigDecimal("price"),
+                        rs.getInt("quantity"),
+                        rs.getInt("category_id"),
                         rs.getString("category_name")
                 );
                 items.add(new CartItem(rs.getInt("cart_id"), userId, product, rs.getInt("cart_quantity")));

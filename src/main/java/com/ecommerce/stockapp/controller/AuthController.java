@@ -1,21 +1,21 @@
 package com.ecommerce.stockapp.controller;
 
 import com.ecommerce.stockapp.dao.ActivityLogDao;
-import com.ecommerce.stockapp.service.AuthService;
-import com.ecommerce.stockapp.service.UserService;
 import com.ecommerce.stockapp.dao.DashboardDao;
+import com.ecommerce.stockapp.dao.UserDao;
 import com.ecommerce.stockapp.model.User;
 import com.ecommerce.stockapp.service.*;
 import com.ecommerce.stockapp.view.*;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
-import javafx.scene.Scene;
 import javafx.stage.Stage;
-import java.util.List; // ✅ IMPORTANT FIX
+
+import java.util.List;
 
 public class AuthController {
     private final Stage stage;
@@ -28,10 +28,12 @@ public class AuthController {
     private final ReportService reportService;
     private final DashboardDao dashboardDao;
     private final ActivityLogDao activityLogDao;
+    private final UserDao userDao;
 
     public AuthController(Stage stage, AuthService authService, UserService userService, ProductService productService,
                           CartService cartService, OrderService orderService, StockService stockService,
-                          ReportService reportService, DashboardDao dashboardDao, ActivityLogDao activityLogDao) {
+                          ReportService reportService, DashboardDao dashboardDao, ActivityLogDao activityLogDao,
+                          UserDao userDao) {
         this.stage = stage;
         this.authService = authService;
         this.userService = userService;
@@ -42,6 +44,7 @@ public class AuthController {
         this.reportService = reportService;
         this.dashboardDao = dashboardDao;
         this.activityLogDao = activityLogDao;
+        this.userDao = userDao;
     }
 
     public boolean login(String email, String password) {
@@ -58,32 +61,29 @@ public class AuthController {
                 ).render());
 
                 case CUSTOMER -> {
-
-                    // 1. Controller
+                    // 1. Création du Controller avec UserService pour ton profil
                     CustomerController controller = new CustomerController(
-                            user, this, productService, cartService, orderService, null
+                            user, this, productService, cartService, orderService, userService, null
                     );
 
-                    // 2. AppShell avec navItems DIRECTEMENT (FIX IMPORTANT)
+                    // 2. Création de la View (indispensable pour lier les actions de navigation)
+                    CustomerDashboardView view = new CustomerDashboardView(controller, null);
+
+                    // 3. Configuration de l'AppShell avec les méthodes de la vue (Catalog, Cart, Profil...)
                     AppShell shell = new AppShell(
                             user,
-                            List.of(
-                                    new AppShell.NavItem("/images/icons/catalog.jpeg", "Catalog", () -> {}),
-                                    new AppShell.NavItem("/images/icons/cart.png", "Cart", () -> {}),
-                                    new AppShell.NavItem("/images/icons/orders.png", "Orders", () -> {}),
-                                    new AppShell.NavItem("/images/icons/profil.png", "Profile", () -> {})
-                            ),
-                            controller::logout
+                            view.navItems(), // Récupère automatiquement les icônes et actions
+                            this::logout
                     );
 
-                    // 3. inject shell
+                    // 4. On lie tout ensemble (Injection de dépendances circulaire résolue)
                     controller.setAppShell(shell);
 
-                    // 4. view
-                    set(new CustomerDashboardView(controller, shell).render());
+                    // On recrée proprement la vue avec le shell initialisé
+                    CustomerDashboardView finalView = new CustomerDashboardView(controller, shell);
+                    set(finalView.render());
                 }
             }
-
             return true;
 
         } catch (RuntimeException e) {
@@ -91,6 +91,8 @@ public class AuthController {
             return false;
         }
     }
+
+    // --- Autres méthodes (Register, Activate, etc.) ---
 
     public boolean registerCustomer(String name, String email, String password) {
         try {
@@ -105,7 +107,7 @@ public class AuthController {
     public void activateStockManager(String token, String password) {
         try {
             authService.activateStockManager(token, password);
-            Ui.info("Account activated", "Your stock manager account is active. You can log in now.");
+            Ui.info("Account activated", "Your stock manager account is active.");
         } catch (RuntimeException e) {
             Ui.error(e);
         }
@@ -123,7 +125,7 @@ public class AuthController {
             activateStockManager(tokenField.getText(), password.getText());
             dialog.close();
         });
-        VBox body = Ui.card(Ui.title("Set your password"), Ui.subtitle("This secure activation was opened from the email link."), tokenField, password, activate);
+        VBox body = Ui.card(Ui.title("Set your password"), Ui.subtitle("Secure activation."), tokenField, password, activate);
         dialog.getDialogPane().setContent(body);
         dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
         dialog.showAndWait();
@@ -147,4 +149,4 @@ public class AuthController {
             scene.setRoot(root);
         }
     }
-}  
+}
