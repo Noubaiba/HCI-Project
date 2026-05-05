@@ -1,0 +1,704 @@
+.root {
+    -fx-font-family: "Segoe UI", "Inter", Arial, sans-serif;
+    -fx-background-color: #f5f7fb;
+    -fx-text-fill: #172033;
+}
+
+.auth-root {
+    -fx-background-color: #9b766d;
+}
+
+.auth-shell {
+    -fx-background-color: white;
+    -fx-background-radius: 24px;
+    -fx-effect: dropshadow(gaussian, rgba(45, 25, 20, 0.28), 32, 0, 0, 14);
+}
+
+.auth-form-panel {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 24 0 0 24;
+    -fx-pref-width: 360px;
+    -fx-min-width: 360px;
+}
+
+.auth-brand-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #6f514b;
+    -fx-line-spacing: -2px;
+}
+
+.brand-square-back {
+    -fx-fill: #c2a095;
+    -fx-arc-width: 8;
+    -fx-arc-height: 8;
+}
+
+.brand-square-front {
+    -fx-fill: #8f6a61;
+    -fx-arc-width: 8;
+    -fx-arc-height: 8;
+}
+
+.login-user-circle {
+    -fx-fill: #9a756d;
+}
+
+.login-user-icon {
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-font-weight: 900;
+}
+
+.auth-input {
+    -fx-background-radius: 999px;
+    -fx-border-radius: 999px;
+    -fx-border-color: #3d3d3d;
+    -fx-border-width: 2px;
+    -fx-padding: 10 18;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+}
+
+.auth-main-button {
+    -fx-background-color: #9a756d;
+    -fx-background-radius: 999px;
+    -fx-text-fill: white;
+    -fx-padding: 11 18;
+    -fx-font-weight: 900;
+}
+
+.auth-switch-text {
+    -fx-font-size: 12px;
+    -fx-text-fill: #403836;
+}
+
+.auth-link {
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #8d675f;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.auth-hint {
+    -fx-font-size: 12px;
+    -fx-text-fill: #766763;
+    -fx-text-alignment: center;
+}
+
+.auth-dot {
+    -fx-fill: #222222;
+}
+
+.auth-visual-panel {
+    -fx-background-color: linear-gradient(to bottom right, #d3b8aa, #a87870);
+    -fx-background-radius: 0 24 24 0;
+    -fx-min-width: 560px;
+}
+
+.wave-a {
+    -fx-fill: rgba(255, 248, 236, 0.45);
+}
+
+.wave-b {
+    -fx-fill: rgba(130, 75, 70, 0.32);
+}
+
+.wave-c {
+    -fx-fill: rgba(255, 255, 255, 0.10);
+}
+
+.auth-top-nav .label {
+    -fx-text-fill: rgba(255, 255, 255, 0.78);
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+}
+
+.auth-welcome-title {
+    -fx-font-size: 52px;
+    -fx-font-weight: 900;
+    -fx-text-fill: white;
+}
+
+.auth-welcome-copy {
+    -fx-font-size: 13px;
+    -fx-text-fill: rgba(255, 255, 255, 0.78);
+    -fx-max-width: 330px;
+    -fx-text-alignment: right;
+}
+
+.app-root {
+    -fx-background-color: #f5f7fb;
+}
+
+.shell-root {
+    -fx-background-color: #f6f7fb;
+}
+
+.shell-sidebar {
+    -fx-background-color: #f0f2f6;
+    -fx-pref-width: 310px;
+    -fx-min-width: 310px;
+    -fx-background-radius: 0 24px 24px 0;
+    -fx-border-color: transparent #d9e2ee transparent transparent;
+    -fx-border-width: 0 1 0 0;
+}
+
+.shell-menu-pill {
+    -fx-background-color: white;
+    -fx-background-radius: 999px;
+    -fx-min-height: 42px;
+    -fx-effect: dropshadow(gaussian, rgba(31, 47, 70, 0.07), 18, 0, 0, 6);
+}
+
+.shell-menu-button {
+    -fx-background-color: transparent;
+    -fx-padding: 8 24;
+}
+
+.shell-menu-bar {
+    -fx-background-color: #1f7bff;
+    -fx-background-radius: 999px;
+    -fx-min-width: 24px;
+    -fx-pref-width: 24px;
+    -fx-max-width: 24px;
+    -fx-min-height: 3px;
+    -fx-pref-height: 3px;
+    -fx-max-height: 3px;
+}
+
+.shell-logo-text {
+    -fx-font-size: 22px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #083f7c;
+}
+
+.shell-section-label {
+    -fx-font-size: 13px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #9ca7b8;
+}
+
+.shell-nav-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #354255;
+    -fx-alignment: center-left;
+    -fx-padding: 13 16;
+    -fx-background-radius: 12px;
+}
+
+.shell-nav-icon {
+    -fx-font-size: 20px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #98a3b4;
+    -fx-min-width: 26px;
+    -fx-alignment: center;
+}
+
+.shell-nav-label {
+    -fx-font-size: 15px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #354255;
+}
+
+.shell-nav-button:hover {
+    -fx-background-color: rgba(210, 218, 229, 0.65);
+}
+
+.shell-nav-button.active {
+    -fx-background-color: #d8dde5;
+    -fx-text-fill: #233044;
+    -fx-border-color: transparent transparent transparent #6478ff;
+    -fx-border-width: 0 0 0 4;
+    -fx-background-radius: 12px;
+    -fx-effect: dropshadow(gaussian, rgba(31, 47, 70, 0.13), 14, 0, 0, 6);
+}
+
+.shell-nav-button.active .shell-nav-icon,
+.shell-nav-button.active .shell-nav-label {
+    -fx-text-fill: #233044;
+}
+
+.shell-content {
+    -fx-background-color: #f8f9fc;
+}
+
+.shell-header {
+    -fx-background-color: white;
+    -fx-border-color: transparent transparent #dde4ee transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 15 22;
+    -fx-min-height: 78px;
+}
+
+.shell-page-title {
+    -fx-font-size: 22px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #111827;
+}
+
+
+.shell-user-name {
+    -fx-font-size: 14px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #111827;
+}
+
+.shell-user-role {
+    -fx-font-size: 12px;
+    -fx-text-fill: #97a1b2;
+}
+
+.shell-profile {
+    -fx-border-color: #dae2ed transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 18 0 0 0;
+}
+
+.shell-profile-name {
+    -fx-font-size: 15px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #354255;
+}
+
+.shell-profile-email {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #9ca7b8;
+}
+
+.shell-logout-button {
+    -fx-background-color: #eef2f7;
+    -fx-text-fill: #dc3545;
+    -fx-background-radius: 10px;
+    -fx-font-weight: 900;
+}
+
+.shell-sidebar.collapsed {
+    -fx-padding: 28 14 24 14;
+    -fx-background-radius: 0;
+    -fx-pref-width: 92px;
+}
+
+.shell-sidebar.collapsed .shell-menu-pill {
+    -fx-min-width: 58px;
+}
+
+.shell-sidebar.collapsed .shell-nav-button {
+    -fx-alignment: center;
+    -fx-padding: 14 12;
+    -fx-background-radius: 10px;
+}
+
+.shell-sidebar.collapsed .shell-logo-text,
+.shell-sidebar.collapsed .shell-section-label {
+    -fx-opacity: 0;
+}
+
+.catalog-grid {
+    -fx-padding: 6 4 20 4;
+}
+
+.product-card {
+    -fx-pref-width: 300px;
+    -fx-min-width: 300px;
+    -fx-max-width: 300px;
+    -fx-min-height: 318px;
+}
+
+.scroll-pane {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+.stockify-welcome-copy {
+    -fx-text-fill: rgba(255, 255, 255, 0.92);
+    -fx-font-size: 23px;
+    -fx-line-spacing: 4px;
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+}
+
+.side-nav {
+    -fx-background-color: #102033;
+    -fx-pref-width: 240px;
+}
+
+.side-nav .title {
+    -fx-text-fill: white;
+}
+
+.side-nav .subtitle {
+    -fx-text-fill: #9fb2c8;
+}
+
+.title {
+    -fx-font-size: 24px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #172033;
+}
+
+.subtitle {
+    -fx-font-size: 13px;
+    -fx-text-fill: #66758a;
+}
+
+.card {
+    -fx-background-color: white;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-border-color: #e3e8f0;
+    -fx-effect: dropshadow(gaussian, rgba(15, 27, 43, 0.06), 18, 0, 0, 8);
+}
+
+.app-header {
+    -fx-background-color: white;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-border-color: #e3e8f0;
+    -fx-padding: 16 18;
+    -fx-effect: dropshadow(gaussian, rgba(15, 27, 43, 0.05), 14, 0, 0, 5);
+}
+
+.header-name {
+    -fx-font-size: 14px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #172033;
+}
+
+.header-role {
+    -fx-font-size: 12px;
+    -fx-text-fill: #66758a;
+}
+
+.avatar-text {
+    -fx-text-fill: white;
+    -fx-font-weight: 900;
+}
+
+.chart-card {
+    -fx-min-height: 260px;
+}
+
+.progress-track {
+    -fx-background-color: #e8eef6;
+    -fx-background-radius: 999px;
+    -fx-min-height: 10px;
+}
+
+.progress-fill {
+    -fx-background-color: #0f766e;
+    -fx-background-radius: 999px;
+    -fx-min-height: 10px;
+}
+
+.product-card {
+    -fx-pref-width: 260px;
+    -fx-min-height: 230px;
+}
+
+.product-title {
+    -fx-font-size: 17px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #172033;
+}
+
+.price {
+    -fx-font-size: 20px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #0f766e;
+}
+
+.stat-number {
+    -fx-font-size: 30px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #0f766e;
+}
+
+.button {
+    -fx-background-radius: 7px;
+    -fx-border-radius: 7px;
+    -fx-padding: 10 14;
+    -fx-font-weight: 700;
+    -fx-cursor: hand;
+}
+
+.primary-button {
+    -fx-background-color: #0f766e;
+    -fx-text-fill: white;
+}
+
+.secondary-button {
+    -fx-background-color: #e8eef6;
+    -fx-text-fill: #172033;
+}
+
+.side-nav .secondary-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #dce8f5;
+    -fx-alignment: center-left;
+}
+
+.side-nav .secondary-button:hover {
+    -fx-background-color: #1b334d;
+}
+
+.danger-button {
+    -fx-background-color: #dc3545;
+    -fx-text-fill: white;
+}
+
+.text-field, .password-field, .combo-box, .spinner {
+    -fx-background-color: white;
+    -fx-background-radius: 7px;
+    -fx-border-color: #d9e1ec;
+    -fx-border-radius: 7px;
+    -fx-padding: 9;
+}
+
+
+
+.table-view {
+    -fx-background-color: white;
+    -fx-background-radius: 8px;
+    -fx-border-color: #e3e8f0;
+    -fx-border-radius: 8px;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #eef3f8;
+}
+
+.report-area {
+    -fx-font-family: "Consolas", monospace;
+    -fx-font-size: 13px;
+}
+
+.stockify-auth-root {
+    -fx-background-color: linear-gradient(to bottom right, #eef1f4, #d8dde2);
+}
+
+.stockify-auth-shell {
+    -fx-background-color: white;
+    -fx-background-radius: 18px;
+    -fx-border-radius: 18px;
+    -fx-effect: dropshadow(gaussian, rgba(20, 31, 45, 0.24), 28, 0, 0, 12);
+}
+
+.stockify-blue-form-side {
+    -fx-background-color: linear-gradient(to bottom right, #064ba3, #0b72df);
+    -fx-background-radius: 18 0 0 18;
+}
+
+.stockify-white-brand-side {
+    -fx-background-color: white;
+    -fx-background-radius: 0 18 18 0;
+}
+
+.stockify-form-panel {
+    -fx-padding: 22 0 22 0;
+}
+
+.stockify-blue-glow-a {
+    -fx-fill: rgba(255, 255, 255, 0.06);
+}
+
+.stockify-blue-glow-b {
+    -fx-fill: rgba(0, 40, 115, 0.14);
+}
+
+.stockify-wave-white {
+    -fx-fill: white;
+}
+
+.stockify-brand-slogan {
+    -fx-font-size: 23px;
+    -fx-font-style: italic;
+    -fx-font-weight: 700;
+    -fx-text-fill: #063f7a;
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+    -fx-line-spacing: 4px;
+}
+
+.stockify-close-button {
+    -fx-background-color: transparent;
+    -fx-border-color: #8aa0b8;
+    -fx-border-radius: 999px;
+    -fx-background-radius: 999px;
+    -fx-text-fill: #6d8299;
+    -fx-font-size: 16px;
+    -fx-padding: 1 8 3 8;
+}
+
+.stockify-form-title {
+    -fx-font-size: 26px;
+    -fx-font-weight: 800;
+    -fx-text-fill: white;
+}
+
+.stockify-field-block {
+    -fx-padding: 0 0 18 0;
+}
+
+.stockify-field-label {
+    -fx-font-size: 18px;
+    -fx-font-weight: 700;
+    -fx-text-fill: white;
+}
+
+.stockify-line-input {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-width: 0 0 2 0;
+    -fx-border-color: rgba(255, 255, 255, 0.86);
+    -fx-padding: 7 34 7 0;
+    -fx-font-size: 15px;
+    -fx-text-fill: white;
+    -fx-prompt-text-fill: rgba(255, 255, 255, 0.56);
+}
+
+.stockify-line-input:focused {
+    -fx-border-color: white;
+}
+
+.stockify-check {
+    -fx-font-size: 12px;
+    -fx-text-fill: white;
+}
+
+.stockify-check .box {
+    -fx-background-color: white;
+    -fx-border-color: white;
+    -fx-border-radius: 2px;
+}
+
+.stockify-check:selected .mark {
+    -fx-background-color: #075cae;
+}
+
+.stockify-primary-button {
+    -fx-background-color: white;
+    -fx-text-fill: #063f7a;
+    -fx-background-radius: 999px;
+    -fx-border-radius: 999px;
+    -fx-padding: 10 34;
+    -fx-font-size: 16px;
+    -fx-font-weight: 800;
+    -fx-effect: dropshadow(gaussian, rgba(0, 35, 90, 0.16), 10, 0, 0, 4);
+}
+
+.stockify-outline-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+    -fx-background-radius: 999px;
+    -fx-border-radius: 999px;
+    -fx-border-color: white;
+    -fx-border-width: 1.4px;
+    -fx-padding: 10 34;
+    -fx-font-size: 16px;
+    -fx-font-weight: 800;
+}
+
+.stockify-guide {
+    -fx-font-size: 12px;
+    -fx-text-fill: rgba(255, 255, 255, 0.80);
+}
+
+.stockify-guide-link {
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+    -fx-text-fill: white;
+    -fx-padding: 0;
+    -fx-border-color: transparent;
+}
+
+/* --- DESIGN DE LA POPUP PERSONNALISÉE --- */
+
+/* Le conteneur de la boîte de dialogue */
+.stockify-popup-card {
+    -fx-background-color: white;
+    -fx-background-radius: 20px;
+    -fx-border-radius: 20px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.4), 25, 0, 0, 10);
+    -fx-border-color: #f0f0f0;
+    -fx-border-width: 1px;
+}
+
+/* Titre à l'intérieur de la popup (Erreur) */
+.popup-title-error {
+    -fx-text-fill: #e74c3c;
+    -fx-font-size: 20px;
+    -fx-font-weight: 800;
+}
+
+/* Titre à l'intérieur de la popup (Succès) */
+.popup-title-success {
+    -fx-text-fill: #27ae60;
+    -fx-font-size: 20px;
+    -fx-font-weight: 800;
+}
+
+/* Message de description dans la popup */
+.popup-message {
+    -fx-text-fill: #535c68;
+    -fx-font-size: 14px;
+    -fx-text-alignment: center;
+}
+
+/* --- ÉTATS D'ERREUR SUR LES INPUTS --- */
+
+/* Si tu veux que la ligne devienne rouge quand il y a une erreur */
+.stockify-line-input-error {
+    -fx-border-color: #ff7675 !important;
+    -fx-prompt-text-fill: #ff7675 !important;
+}
+
+/* --- EFFETS DE SURVOL POUR LES BOUTONS DE POPUP --- */
+
+/* On réutilise tes boutons existants mais on s'assure qu'ils ressortent bien sur le blanc */
+.stockify-popup-card .stockify-primary-button {
+    -fx-background-color: linear-gradient(to right, #064ba3, #0b72df);
+    -fx-text-fill: white;
+}
+
+.stockify-popup-card .stockify-primary-button:hover {
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+    -fx-effect: dropshadow(gaussian, rgba(6, 75, 163, 0.3), 10, 0, 0, 5);
+}
+
+/* --- L'OVERLAY (FOND SOMBRE) --- */
+.popup-overlay {
+    -fx-background-color: rgba(0, 0, 0, 0.7);
+    /* On peut ajouter un léger flou si la version de JavaFX le supporte */
+    /* -fx-backdrop-filter: blur(5px); */
+}
+
+.cart-badge {
+    -fx-background-color: #ff4757; /* Rouge */
+    -fx-text-fill: white;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-padding: 2 5 2 5;
+    -fx-background-radius: 10;
+    -fx-min-width: 18px;
+    -fx-alignment: center;
+}
+
+.shell-search {
+    -fx-background-radius: 20;
+    -fx-border-radius: 20;
+	-fx-background-color: white;
+    -fx-background-radius: 8px;
+    -fx-border-color: #d2dae6;
+    -fx-border-radius: 8px;
+    -fx-min-width: 300px;
+    -fx-padding: 11 16;
+    -fx-font-size: 14px;
+}
