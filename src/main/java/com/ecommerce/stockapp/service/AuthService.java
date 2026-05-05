@@ -7,6 +7,7 @@ import com.ecommerce.stockapp.model.User;
 import com.ecommerce.stockapp.model.UserStatus;
 import com.ecommerce.stockapp.util.PasswordUtil;
 import com.ecommerce.stockapp.util.ValidationUtil;
+import java.time.LocalDateTime;
 
 public class AuthService {
     private final UserDao userDao;
@@ -20,13 +21,18 @@ public class AuthService {
     public User login(String email, String password) {
         ValidationUtil.requireEmail(email);
         ValidationUtil.requireText(password, "Password");
-        User user = userDao.findByEmail(email).orElseThrow(() -> new IllegalArgumentException("Invalid email or password."));
+
+        User user = userDao.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid email or password."));
+
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new IllegalArgumentException("This account is not active.");
         }
+
         if (!PasswordUtil.verify(password, user.getPassword())) {
             throw new IllegalArgumentException("Invalid email or password.");
         }
+
         logs.log(user.getId(), "LOGIN", "Successful login");
         return user;
     }
@@ -35,10 +41,29 @@ public class AuthService {
         ValidationUtil.requireText(name, "Name");
         ValidationUtil.requireEmail(email);
         ValidationUtil.requirePassword(password);
+
         if (userDao.findByEmail(email).isPresent()) {
             throw new IllegalArgumentException("Email already exists.");
         }
-        User user = new User(0, name, email, PasswordUtil.hash(password), Role.CUSTOMER, UserStatus.ACTIVE, null);
+
+        // Hacher le mot de passe avant de l'enregistrer
+        String hashed = PasswordUtil.hash(password);
+
+        // Création de l'utilisateur avec les 11 paramètres du modèle User mis à jour
+        User user = new User(
+                0,                    // id (auto-incrémenté par la DB)
+                name,                 // name
+                email,                // email
+                hashed,               // password
+                Role.CUSTOMER,        // role
+                UserStatus.ACTIVE,    // status
+                null,                 // activationToken
+                LocalDateTime.now(),  // createdAt
+                null,                 // phone
+                null,                 // deliveryAddress
+                null                  // profilePicture
+        );
+
         int id = userDao.create(user);
         logs.log(id, "REGISTER", "Customer account created");
     }
@@ -46,10 +71,14 @@ public class AuthService {
     public void activateStockManager(String token, String password) {
         ValidationUtil.requireText(token, "Activation token");
         ValidationUtil.requirePassword(password);
-        User user = userDao.findByActivationToken(token).orElseThrow(() -> new IllegalArgumentException("Invalid activation token."));
+
+        User user = userDao.findByActivationToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid activation token."));
+
         if (user.getRole() != Role.STOCK_MANAGER) {
             throw new IllegalArgumentException("This token does not belong to a stock manager account.");
         }
+
         userDao.activate(token, PasswordUtil.hash(password));
         logs.log(user.getId(), "ACTIVATE", "Stock manager activated account");
     }

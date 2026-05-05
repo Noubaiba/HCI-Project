@@ -8,6 +8,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 
 public class UserDao {
     private final Database database;
@@ -56,7 +57,8 @@ public class UserDao {
     }
 
     public int create(User user) {
-        String sql = "INSERT INTO users(name, email, password, role, status, activation_token) VALUES (?, ?, ?, ?, ?, ?)";
+        // Ajout de created_at dans l'insertion initiale
+        String sql = "INSERT INTO users(name, email, password, role, status, activation_token, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection connection = database.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             statement.setString(1, user.getName());
@@ -65,6 +67,8 @@ public class UserDao {
             statement.setString(4, user.getRole().name());
             statement.setString(5, user.getStatus().name());
             statement.setString(6, user.getActivationToken());
+            statement.setTimestamp(7, Timestamp.valueOf(user.getCreatedAt() != null ? user.getCreatedAt() : LocalDateTime.now()));
+
             statement.executeUpdate();
             ResultSet keys = statement.getGeneratedKeys();
             if (keys.next()) {
@@ -111,9 +115,29 @@ public class UserDao {
             throw new DaoException("Unable to activate account", e);
         }
     }
-   
+
+    /**
+     * Met à jour les informations de profil (Nom, Tel, Adresse, Image)
+     */
+    public void updateProfile(User user) {
+        String sql = "UPDATE users SET name = ?, phone = ?, delivery_address = ?, profile_picture = ? WHERE id = ?";
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, user.getName());
+            statement.setString(2, user.getPhone());
+            statement.setString(3, user.getDeliveryAddress());
+            statement.setString(4, user.getProfilePicture());
+            statement.setInt(5, user.getId());
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new DaoException("Erreur lors de la mise à jour du profil", e);
+        }
+    }
 
     private User map(ResultSet rs) throws SQLException {
+        Timestamp ts = rs.getTimestamp("created_at");
+        LocalDateTime ldt = (ts != null) ? ts.toLocalDateTime() : null;
+
         return new User(
                 rs.getInt("id"),
                 rs.getString("name"),
@@ -121,7 +145,11 @@ public class UserDao {
                 rs.getString("password"),
                 Role.valueOf(rs.getString("role")),
                 UserStatus.valueOf(rs.getString("status")),
-                rs.getString("activation_token")
+                rs.getString("activation_token"),
+                ldt,
+                rs.getString("phone"),
+                rs.getString("delivery_address"),
+                rs.getString("profile_picture")
         );
     }
 }

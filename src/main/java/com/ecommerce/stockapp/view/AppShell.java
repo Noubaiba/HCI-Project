@@ -143,6 +143,22 @@ public class AppShell {
         label.getStyleClass().add("shell-section-label");
         return label;
     }
+    public void setNavItems(List<NavItem> items) {
+        this.navBox.getChildren().clear(); // On vide l'ancienne liste
+        this.collapsibleNodes.removeIf(node -> node instanceof Label && node.getStyleClass().contains("shell-nav-label")); // Nettoyage
+
+        for (NavItem item : items) {
+            Button button = navButton(item);
+            navBox.getChildren().add(button);
+
+            // Optionnel : mettre le premier en "active" par défaut
+            if (activeButton == null) {
+                activeButton = button;
+                button.getStyleClass().add("active");
+            }
+        }
+    }
+
 
     public void setNavItems(List<NavItem> items) {
         this.navBox.getChildren().clear(); // On vide l'ancienne liste

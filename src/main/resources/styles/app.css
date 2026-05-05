@@ -238,7 +238,6 @@
     -fx-text-fill: #111827;
 }
 
-
 .shell-user-name {
     -fx-font-size: 14px;
     -fx-font-weight: 900;
@@ -397,11 +396,6 @@
     -fx-min-height: 10px;
 }
 
-.product-card {
-    -fx-pref-width: 260px;
-    -fx-min-height: 230px;
-}
-
 .product-title {
     -fx-font-size: 17px;
     -fx-font-weight: 800;
@@ -460,8 +454,6 @@
     -fx-border-radius: 7px;
     -fx-padding: 9;
 }
-
-
 
 .table-view {
     -fx-background-color: white;
@@ -618,9 +610,6 @@
     -fx-border-color: transparent;
 }
 
-/* --- DESIGN DE LA POPUP PERSONNALISÉE --- */
-
-/* Le conteneur de la boîte de dialogue */
 .stockify-popup-card {
     -fx-background-color: white;
     -fx-background-radius: 20px;
@@ -630,38 +619,29 @@
     -fx-border-width: 1px;
 }
 
-/* Titre à l'intérieur de la popup (Erreur) */
 .popup-title-error {
     -fx-text-fill: #e74c3c;
     -fx-font-size: 20px;
     -fx-font-weight: 800;
 }
 
-/* Titre à l'intérieur de la popup (Succès) */
 .popup-title-success {
     -fx-text-fill: #27ae60;
     -fx-font-size: 20px;
     -fx-font-weight: 800;
 }
 
-/* Message de description dans la popup */
 .popup-message {
     -fx-text-fill: #535c68;
     -fx-font-size: 14px;
     -fx-text-alignment: center;
 }
 
-/* --- ÉTATS D'ERREUR SUR LES INPUTS --- */
-
-/* Si tu veux que la ligne devienne rouge quand il y a une erreur */
 .stockify-line-input-error {
     -fx-border-color: #ff7675 !important;
     -fx-prompt-text-fill: #ff7675 !important;
 }
 
-/* --- EFFETS DE SURVOL POUR LES BOUTONS DE POPUP --- */
-
-/* On réutilise tes boutons existants mais on s'assure qu'ils ressortent bien sur le blanc */
 .stockify-popup-card .stockify-primary-button {
     -fx-background-color: linear-gradient(to right, #064ba3, #0b72df);
     -fx-text-fill: white;
@@ -673,15 +653,12 @@
     -fx-effect: dropshadow(gaussian, rgba(6, 75, 163, 0.3), 10, 0, 0, 5);
 }
 
-/* --- L'OVERLAY (FOND SOMBRE) --- */
 .popup-overlay {
     -fx-background-color: rgba(0, 0, 0, 0.7);
-    /* On peut ajouter un léger flou si la version de JavaFX le supporte */
-    /* -fx-backdrop-filter: blur(5px); */
 }
 
 .cart-badge {
-    -fx-background-color: #ff4757; /* Rouge */
+    -fx-background-color: #ff4757;
     -fx-text-fill: white;
     -fx-font-size: 10px;
     -fx-font-weight: bold;
@@ -694,11 +671,21 @@
 .shell-search {
     -fx-background-radius: 20;
     -fx-border-radius: 20;
-	-fx-background-color: white;
-    -fx-background-radius: 8px;
+    -fx-background-color: white;
     -fx-border-color: #d2dae6;
-    -fx-border-radius: 8px;
     -fx-min-width: 300px;
     -fx-padding: 11 16;
     -fx-font-size: 14px;
+}
+
+.btn-outline {
+    -fx-background-color: white;
+    -fx-border-color: #e2e8f0;
+    -fx-border-radius: 5;
+    -fx-padding: 5 15;
+    -fx-cursor: hand;
+}
+
+.btn-outline:hover {
+    -fx-background-color: #f1f5f9;
 }
