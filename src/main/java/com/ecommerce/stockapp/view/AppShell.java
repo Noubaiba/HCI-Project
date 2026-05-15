@@ -98,15 +98,8 @@ public class AppShell {
         VBox logoBlock = new VBox(10, logo(), sectionTitle);
         logoBlock.setAlignment(Pos.CENTER_LEFT);
 
-        navBox.getChildren().clear();
-        for (NavItem item : navItems) {
-            Button button = navButton(item);
-            navBox.getChildren().add(button);
-            if (activeButton == null) {
-                activeButton = button;
-                button.getStyleClass().add("active");
-            }
-        }
+        
+        
 
 
         Region spacer = new Region();
@@ -163,15 +156,21 @@ public class AppShell {
 
         collapsibleNodes.add(label); // 👈 important
 
+//        HBox content = new HBox(50, item.icon(), label);
         HBox content = new HBox(10, item.icon(), label);
         content.setAlignment(Pos.CENTER_LEFT);
+        content.setMaxWidth(Double.MAX_VALUE);
+        
+        
 
         Button button = new Button();
         button.setGraphic(content);
+        button.setUserData(content);
 
         button.getStyleClass().add("shell-nav-button");
 
         button.getProperties().put("navLabel", item.label());
+        button.setMaxWidth(Double.MAX_VALUE);
 
         button.setOnAction(e -> {
             if (activeButton != null) {
@@ -331,20 +330,44 @@ public class AppShell {
             navBox.setAlignment(Pos.TOP_CENTER);
             profile.setAlignment(Pos.CENTER); // Centre l'avatar quand réduit
             navBox.getChildren().forEach(node -> {
-                if (node instanceof Button btn) btn.setAlignment(Pos.CENTER);
+                if (node instanceof Button btn) {
+
+                    HBox content = (HBox) btn.getUserData();
+
+                    if (collapsed) {
+                        btn.setAlignment(Pos.CENTER);
+                        content.setAlignment(Pos.CENTER); // 🔥 centre l’icône
+                    } else {
+                        btn.setAlignment(Pos.CENTER_LEFT);
+                        content.setAlignment(Pos.CENTER_LEFT);
+                    }
+                }
             });
         } else {
             sidebar.setPadding(new Insets(28, 24, 24, 24));
             navBox.setAlignment(Pos.TOP_LEFT);
             profile.setAlignment(Pos.CENTER_LEFT);
             navBox.getChildren().forEach(node -> {
-                if (node instanceof Button btn) btn.setAlignment(Pos.CENTER_LEFT);
+                if (node instanceof Button btn) {
+
+                    HBox content = (HBox) btn.getUserData();
+
+                    if (collapsed) {
+                        btn.setAlignment(Pos.CENTER);
+                        content.setAlignment(Pos.CENTER);
+                    } else {
+                        btn.setAlignment(Pos.CENTER_LEFT);
+                        content.setAlignment(Pos.CENTER_LEFT); // 🔥 ça manquait
+                    }
+                }
             });
         }
 
         // Masquer les labels de section et logo
         sectionTitle.setVisible(!collapsed);
         sectionTitle.setManaged(!collapsed);
+        
+        navBox.setFillWidth(true);
 
         // Boucle sur les nœuds collapsibles (qui inclut maintenant le texte et le bouton logout)
         for (javafx.scene.Node node : collapsibleNodes) {
