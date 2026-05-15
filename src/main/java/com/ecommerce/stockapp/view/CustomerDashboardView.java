@@ -958,7 +958,7 @@ public class CustomerDashboardView {
         profileCard.getChildren().addAll(hero, optionsContainer);
 
         // --- 3. LOGOUT (Bouton discret en bas) ---
-        Button btnLogout = new Button("Se déconnecter");
+        Button btnLogout = new Button("Logout");
         btnLogout.setStyle("-fx-background-color: transparent; -fx-text-fill: #94a3b8; -fx-font-weight: bold; " +
                 "-fx-cursor: hand; -fx-padding: 35; -fx-font-size: 13px;");
         btnLogout.setOnMouseEntered(e -> btnLogout.setStyle(btnLogout.getStyle() + "-fx-text-fill: #ef4444;"));

@@ -22,6 +22,10 @@ import java.util.function.Consumer;
 import com.ecommerce.stockapp.util.IconFactory;
 import com.ecommerce.stockapp.view.NavItem;
 import javafx.scene.Node;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
+import javafx.geometry.Side;
+import javafx.scene.control.CustomMenuItem;
 
 public class AppShell {
 	public record NavItem(Node icon, String label, Runnable action) {}
@@ -98,8 +102,8 @@ public class AppShell {
         VBox logoBlock = new VBox(10, logo(), sectionTitle);
         logoBlock.setAlignment(Pos.CENTER_LEFT);
 
-        
-        
+
+
 
 
         Region spacer = new Region();
@@ -160,8 +164,8 @@ public class AppShell {
         HBox content = new HBox(10, item.icon(), label);
         content.setAlignment(Pos.CENTER_LEFT);
         content.setMaxWidth(Double.MAX_VALUE);
-        
-        
+
+
 
         Button button = new Button();
         button.setGraphic(content);
@@ -276,7 +280,6 @@ public class AppShell {
 
     private HBox profileBlock() {
         StackPane avatar = Ui.avatar(user.getName());
-        // L'avatar doit rester visible, donc on ne l'ajoute PAS à collapsibleNodes
 
         Label name = new Label(user.getName());
         name.getStyleClass().add("shell-profile-name");
@@ -285,27 +288,48 @@ public class AppShell {
         email.getStyleClass().add("shell-profile-email");
 
         VBox text = new VBox(2, name, email);
+        text.setAlignment(Pos.CENTER_LEFT);
 
-        // On réutilise ton bouton logoutButton ici
-        logoutButton = new Button("Logout");
-        logoutButton.getStyleClass().add("shell-logout-button");
-        logoutButton.setOnAction(e -> logout.run());
+        Label arrow = new Label("⌵");
+        arrow.setStyle("-fx-text-fill: #64748b; -fx-font-size: 18px; -fx-font-weight: bold;");
 
-        // Ajout des textes et du bouton à la liste de réduction
-        collapsibleNodes.add(text);
-        collapsibleNodes.add(logoutButton);
-
-        // Structure : [Avatar] [VBox Texte] [Region Spacer] [Logout]
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        HBox profileContainer = new HBox(12, avatar, text, spacer, logoutButton);
+        // --- LE MENU LOGOUT (BULLE BLANCHE) ---
+        ContextMenu logoutMenu = new ContextMenu();
+        logoutMenu.getStyleClass().add("modern-logout-menu");
+
+        Label logoutLabel = new Label("Logout");
+        // ON UTILISE UNE CLASSE SPÉCIFIQUE POUR LE ROUGE
+        logoutLabel.getStyleClass().add("logout-item-text-red");
+        logoutLabel.setMaxWidth(Double.MAX_VALUE);
+        logoutLabel.setAlignment(Pos.CENTER);
+
+        CustomMenuItem logoutItem = new CustomMenuItem(logoutLabel);
+        logoutItem.setHideOnClick(true);
+        logoutItem.setOnAction(e -> logout.run());
+
+        logoutMenu.getItems().add(logoutItem);
+
+        // Compatibilité
+        logoutButton = new Button("Logout");
+        logoutButton.setVisible(false);
+        logoutButton.setManaged(false);
+
+        HBox profileContainer = new HBox(12, avatar, text, spacer, arrow);
         profileContainer.getStyleClass().add("shell-profile");
-        profileContainer.setAlignment(Pos.CENTER_LEFT);
+        profileContainer.setCursor(javafx.scene.Cursor.HAND);
+
+        profileContainer.setOnMouseClicked(e -> {
+            // Affichage au-dessus du bloc profil
+            logoutMenu.show(profileContainer, javafx.geometry.Side.TOP, 0, -10);
+        });
+
+        collapsibleNodes.addAll(java.util.List.of(text, arrow));
 
         return profileContainer;
     }
-
     private VBox hamburgerIcon() {
         VBox bars = new VBox(4);
         bars.setAlignment(Pos.CENTER);
@@ -366,7 +390,7 @@ public class AppShell {
         // Masquer les labels de section et logo
         sectionTitle.setVisible(!collapsed);
         sectionTitle.setManaged(!collapsed);
-        
+
         navBox.setFillWidth(true);
 
         // Boucle sur les nœuds collapsibles (qui inclut maintenant le texte et le bouton logout)
