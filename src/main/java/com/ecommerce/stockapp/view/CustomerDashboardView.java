@@ -53,6 +53,9 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
 import com.ecommerce.stockapp.model.OrderStatus;
+import com.ecommerce.stockapp.util.IconFactory;
+import com.ecommerce.stockapp.view.NavItem;
+
 
 public class CustomerDashboardView {
     private final CustomerController controller;
@@ -64,103 +67,23 @@ public class CustomerDashboardView {
     }
 
     public Parent render() {
-        // On injecte les actions (Catalog, Cart, etc.) dans le shell
+
+        if (shell == null) {
+            throw new IllegalStateException("Shell non initialisé");
+        }
+
+        if (controller == null || controller.cart() == null) {
+            throw new IllegalStateException("Controller ou cart null");
+        }
+
         shell.setNavItems(navItems());
         shell.updateCartCount(controller.cart().size());
 
-        // On affiche le premier écran
         showCatalog();
 
         return shell.render();
     }
 
-    //    private void showCatalog() {
-//        // 1. Petit Header Noir (Promo)
-//        Label promoLabel = new Label("LIVRAISON GRATUITE DÈS 39€ D'ACHAT | RETOURS GRATUITS");
-//        promoLabel.setStyle("-fx-background-color: black; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 8px; -fx-font-weight: bold;");
-//        promoLabel.setMaxWidth(Double.MAX_VALUE);
-//        promoLabel.setAlignment(Pos.CENTER);
-//
-//        // 2. Barre de Catégories Horizontale (HBox)
-//        HBox categoryBar = new HBox(30); // Espace entre catégories augmenté à 30
-//        categoryBar.setAlignment(Pos.CENTER_LEFT);
-//        categoryBar.setPadding(new Insets(0, 20, 0, 20));
-//        categoryBar.setStyle("-fx-background-color: white;");
-//
-//        // 3. ScrollPane spécial pour la barre (Fixe en haut, scroll horizontal uniquement)
-//        ScrollPane categoryScroll = new ScrollPane(categoryBar);
-//        categoryScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER); // INTERDIT le scroll haut/bas
-//        categoryScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED); // Autorise gauche/droite
-//        categoryScroll.setFitToHeight(true);
-//
-//        // ON AUGMENTE LA HAUTEUR ICI (60px au lieu de automatique)
-//        categoryScroll.setMinHeight(60);
-//        categoryScroll.setPrefHeight(60);
-//
-//        categoryScroll.setStyle("-fx-background-color: white; -fx-background: white; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
-//
-//        FlowPane grid = new FlowPane(15, 15);
-//        grid.setPadding(new Insets(20));
-//        grid.setAlignment(Pos.TOP_CENTER);
-//
-//        java.util.function.Consumer<String> filterAction = (categoryName) -> {
-//            grid.getChildren().clear();
-//            controller.products("").stream()
-//                    .filter(p -> categoryName.equals("TOUT VOIR") ||
-//                            (p.getCategoryName() != null && p.getCategoryName().equalsIgnoreCase(categoryName)))
-//                    .forEach(product -> grid.getChildren().add(productCard(product)));
-//
-//            categoryBar.getChildren().forEach(node -> {
-//                if (node instanceof Button b) {
-//                    // FORCE LE TEXTE A S'AFFICHER EN ENTIER
-//                    b.setMinWidth(Region.USE_PREF_SIZE);
-//                    b.setMinHeight(50); // Boutons plus hauts pour cliquer facilement
-//
-//                    if (b.getText().equals(categoryName)) {
-//                        b.setStyle("-fx-background-color: transparent; -fx-font-weight: bold; -fx-text-fill: black; -fx-border-color: black; -fx-border-width: 0 0 3 0; -fx-cursor: hand;");
-//                    } else {
-//                        b.setStyle("-fx-background-color: transparent; -fx-font-weight: normal; -fx-text-fill: #666; -fx-cursor: hand; -fx-border-color: transparent;");
-//                    }
-//                }
-//            });
-//        };
-//
-//        // Remplissage
-//        try {
-//            List<String> cats = new java.util.ArrayList<>();
-//            cats.add("TOUT VOIR");
-//            cats.addAll(controller.products("").stream()
-//                    .map(Product::getCategoryName)
-//                    .filter(c -> c != null && !c.isBlank())
-//                    .distinct().map(String::toUpperCase).toList());
-//
-//            for (String catName : cats) {
-//                Button catBtn = new Button(catName);
-//                catBtn.setMinWidth(Region.USE_PREF_SIZE); // Crucial pour éviter les "..."
-//                catBtn.setOnAction(e -> filterAction.accept(catName));
-//                categoryBar.getChildren().add(catBtn);
-//            }
-//        } catch (Exception e) { e.printStackTrace(); }
-//
-//        shell.setSearchHandler(query -> {
-//            grid.getChildren().clear();
-//            controller.products(query).forEach(p -> grid.getChildren().add(productCard(p)));
-//        });
-//
-//        filterAction.accept("TOUT VOIR");
-//
-//        // Scroll principal pour les produits
-//        ScrollPane mainProductScroll = new ScrollPane(grid);
-//        mainProductScroll.setFitToWidth(true);
-//        mainProductScroll.setStyle("-fx-background-color: white; -fx-background: white;");
-//
-//        // L'ASSEMBLAGE : promo + categoryScroll sont en dehors du scroll des produits
-//        // donc ils restent fixes en haut.
-//        VBox layout = new VBox(0, promoLabel, categoryScroll, mainProductScroll);
-//        VBox.setVgrow(mainProductScroll, Priority.ALWAYS);
-//
-//        setContent("Product Catalog", layout);
-//    }
     private void showCatalog() {
         // 1. Header promo
         Label promoLabel = new Label("LIVRAISON GRATUITE DÈS 39€ D'ACHAT | RETOURS GRATUITS");
@@ -438,35 +361,6 @@ public class CustomerDashboardView {
         dialog.showAndWait();
     }
 
-    //    private StackPane productVisual(Product product) {
-//        StackPane container = new StackPane();
-//        container.setPrefHeight(220); // Hauteur plus grande pour le style SHEIN
-//        container.setMaxWidth(Double.MAX_VALUE);
-//
-//        // Empêche le StackPane de limiter la taille de l'image
-//        container.setStyle("-fx-background-color: #f7f7f7; -fx-background-radius: 8 8 0 0; -fx-overflow: hidden;");
-//
-//        if (product.getImageUrl() != null && !product.getImageUrl().isBlank()) {
-//            try {
-//                Image img = new Image(resolveImage(product.getImageUrl()), true);
-//                ImageView iv = new ImageView(img);
-//
-//                // --- CONFIGURATION STYLE SHEIN ---
-//                iv.setPreserveRatio(true);
-//                // On lie la largeur de l'image à celle du container pour qu'elle prenne toute la place
-//                iv.fitWidthProperty().bind(container.widthProperty());
-//                iv.setFitHeight(220);
-//
-//                container.getChildren().add(iv);
-//                return container;
-//            } catch (Exception ignored) {}
-//        }
-//
-//        Label glyph = new Label(productGlyph(product.getCategoryName()));
-//        glyph.setStyle("-fx-font-size: 50;");
-//        container.getChildren().add(glyph);
-//        return container;
-//    }
     private StackPane productVisual(Product product) {
         StackPane container = new StackPane();
         container.setPrefHeight(220);
@@ -762,35 +656,7 @@ public class CustomerDashboardView {
         mainLayout.getChildren().addAll(leftColumn, rightColumn);
         setContent("Panier", mainLayout);
     }
-
-
-    //    private void showOrders() {
-//        shell.setSearchHandler(null);
-//
-//        VBox container = new VBox(20);
-//        container.setPadding(new Insets(30));
-//        container.setStyle("-fx-background-color: #f8f9fa;"); // Gris très clair moderne
-//        container.setAlignment(Pos.TOP_CENTER);
-//
-//        List<Order> orders = controller.orders();
-//
-//        if (orders.isEmpty()) {
-//            Label emptyLabel = new Label("VOUS N'AVEZ PAS ENCORE DE COMMANDES");
-//            emptyLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #999; -fx-font-weight: bold;");
-//            container.getChildren().add(emptyLabel);
-//        } else {
-//            for (Order order : orders) {
-//                container.getChildren().add(createOrderCard(order));
-//            }
-//        }
-//
-//        ScrollPane scroll = new ScrollPane(container);
-//        scroll.setFitToWidth(true);
-//        scroll.setStyle("-fx-background-color: transparent; -fx-background: #f8f9fa;");
-//
-//        setContent("MES COMMANDES", scroll);
-//    }
-    // Assure-toi que les 4 paramètres sont bien là
+    
     private Button createFilterButton(String text, boolean active, List<Order> allOrders, VBox container, HBox filterParent) {
         Button b = new Button(text);
 
@@ -880,48 +746,7 @@ public class CustomerDashboardView {
 
         setContent("MES COMMANDES", scroll);
     }
-    //    private HBox createOrderCard(Order order) {
-//        HBox card = new HBox(20);
-//        card.setAlignment(Pos.CENTER_LEFT);
-//        card.setPadding(new Insets(20));
-//        card.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #eee; -fx-border-width: 1;");
-//
-//        // Ombre légère
-//        card.setEffect(new DropShadow(10, Color.rgb(0,0,0,0.05)));
-//
-//        // Infos Commande
-//        VBox info = new VBox(5);
-//        Label idLabel = new Label("Commande #" + order.getId());
-//        idLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
-//
-//        Label dateLabel = new Label(order.getDate().toString());
-//        dateLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 12px;");
-//        info.getChildren().addAll(idLabel, dateLabel);
-//
-//        // Statut (Style Badge)
-//        Label statusLabel = new Label("PAYÉ"); // Tu peux utiliser order.getStatus()
-//        statusLabel.setStyle("-fx-background-color: #e3f2fd; -fx-text-fill: #1976d2; -fx-padding: 5 10; -fx-background-radius: 15; -fx-font-size: 11px; -fx-font-weight: bold;");
-//
-//        Region spacer = new Region();
-//        HBox.setHgrow(spacer, Priority.ALWAYS);
-//
-//        // Prix
-//        Label totalLabel = new Label(order.getTotalPrice() + " MAD");
-//        totalLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #000;");
-//
-//        // Bouton Détails
-//        Button btnDetails = new Button("VOIR DÉTAILS");
-//        btnDetails.setStyle("-fx-background-color: transparent; -fx-border-color: black; -fx-border-width: 1; -fx-cursor: hand; -fx-font-weight: bold; -fx-font-size: 11px;");
-//        btnDetails.setOnAction(e -> showOrderDetails(order)); // On passe à la vue des order_items
-//
-//        card.getChildren().addAll(info, statusLabel, spacer, totalLabel, btnDetails);
-//
-//        // Animation au survol
-//        card.setOnMouseEntered(e -> card.setStyle("-fx-background-color: #fafafa; -fx-background-radius: 8; -fx-border-color: #ddd; -fx-border-width: 1;"));
-//        card.setOnMouseExited(e -> card.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #eee; -fx-border-width: 1;"));
-//
-//        return card;
-//    }
+
     private HBox createOrderRow(Order order) {
         HBox row = new HBox(20);
         row.setAlignment(Pos.CENTER_LEFT);
@@ -1000,19 +825,6 @@ public class CustomerDashboardView {
         imageContainer.setPrefSize(100, 100);
         imageContainer.setStyle("-fx-background-color: #f8f9fa; -fx-background-radius: 10;");
 
-        // On récupère l'image réelle via l'URL stockée dans le produit
-//        String imageUrl = controller.getImageUrl(item.getProductId());
-//        if (imageUrl != null && !imageUrl.isEmpty()) {
-//            ImageView iv = new ImageView(new Image(imageUrl, true)); // 'true' pour chargement en arrière-plan
-//            iv.setFitWidth(100);
-//            iv.setFitHeight(100);
-//            iv.setPreserveRatio(true);
-//            imageContainer.getChildren().add(iv);
-//        } else {
-//            Label placeholder = new Label("📦");
-//            placeholder.setStyle("-fx-font-size: 30px;");
-//            imageContainer.getChildren().add(placeholder);
-//        }
         // 1. On récupère le produit complet via son ID pour avoir accès à getImageUrl()
         Product p = controller.getProductById(item.getProductId());
 
@@ -1423,10 +1235,10 @@ public class CustomerDashboardView {
 
     public List<AppShell.NavItem> navItems() {
         return List.of(
-                new AppShell.NavItem("/images/icons/catalog.jpeg", "Catalog", this::showCatalog),
-                new AppShell.NavItem("/images/icons/cart.png", "Cart", this::showCart),
-                new AppShell.NavItem("/images/icons/orders.png", "Orders", this::showOrders),
-                new AppShell.NavItem("/images/icons/profil.png", "Profile", this::showProfile)
+            new AppShell.NavItem(IconFactory.catalogIcon(), "Catalog", this::showCatalog),
+            new AppShell.NavItem(IconFactory.cartIcon(), "Cart", this::showCart),
+            new AppShell.NavItem(IconFactory.ordersIcon(), "Orders", this::showOrders),
+            new AppShell.NavItem(IconFactory.profileIcon(), "Profile", this::showProfile)
         );
     }
 }

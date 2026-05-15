@@ -19,9 +19,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import com.ecommerce.stockapp.util.IconFactory;
+import com.ecommerce.stockapp.view.NavItem;
+import javafx.scene.Node;
 
 public class AppShell {
-    public record NavItem(String iconPath, String label, Runnable action) {}
+	public record NavItem(Node icon, String label, Runnable action) {}
 
     private final User user;
     private final List<NavItem> navItems;
@@ -105,17 +108,7 @@ public class AppShell {
             }
         }
 
-//        Region spacer = new Region();
-//        VBox.setVgrow(spacer, Priority.ALWAYS);
-//
-//        profile = profileBlock();
-//        logoutButton = new Button("Logout");
-//        logoutButton.getStyleClass().add("shell-logout-button");
-//        logoutButton.setMaxWidth(Double.MAX_VALUE);
-//        logoutButton.setOnAction(e -> logout.run());
-//
-//        sidebar.getChildren().addAll(menuPill, logoBlock, navBox, spacer, profile, logoutButton);
-//        return sidebar;
+
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
 
@@ -134,8 +127,9 @@ public class AppShell {
         logoText = new Label("Stockify");
         logoText.getStyleClass().add("shell-logo-text");
         collapsibleNodes.add(logoText);
-        HBox logo = new HBox(12, image, logoText);
-        logo.setAlignment(Pos.CENTER_LEFT);
+        HBox logo = new HBox(18, image, logoText);
+        logo.setPadding(new Insets(0, 0, 10, 0));
+        logo.setAlignment(Pos.CENTER);
         return logo;
     }
 
@@ -163,30 +157,33 @@ public class AppShell {
     }
 
     private Button navButton(NavItem item) {
-        ImageView icon = new ImageView(new Image(getClass().getResource(item.iconPath()).toExternalForm()));
-        icon.setFitWidth(24);
-        icon.setFitHeight(24);
-        icon.setPreserveRatio(true);
-        icon.getStyleClass().add("shell-nav-icon");
+
         Label label = new Label(item.label());
         label.getStyleClass().add("shell-nav-label");
-        collapsibleNodes.add(label);
-        HBox graphic = new HBox(14, icon, label);
-        graphic.setAlignment(Pos.CENTER_LEFT);
+
+        collapsibleNodes.add(label); // 👈 important
+
+        HBox content = new HBox(10, item.icon(), label);
+        content.setAlignment(Pos.CENTER_LEFT);
 
         Button button = new Button();
-        button.setGraphic(graphic);
+        button.setGraphic(content);
+
         button.getStyleClass().add("shell-nav-button");
-        button.setMaxWidth(Double.MAX_VALUE);
+
         button.getProperties().put("navLabel", item.label());
+
         button.setOnAction(e -> {
             if (activeButton != null) {
                 activeButton.getStyleClass().remove("active");
             }
+
             activeButton = button;
             button.getStyleClass().add("active");
+
             item.action().run();
         });
+
         return button;
     }
 
