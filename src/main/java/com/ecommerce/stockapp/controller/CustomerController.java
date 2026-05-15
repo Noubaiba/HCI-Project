@@ -10,6 +10,8 @@ import com.ecommerce.stockapp.service.ProductService;
 import com.ecommerce.stockapp.service.UserService; // On utilise le service plutôt que le DAO direct
 import com.ecommerce.stockapp.view.AppShell;
 import com.ecommerce.stockapp.model.OrderItem;
+import javafx.scene.Node;
+import javafx.scene.control.PasswordField; // Profites-en pour ajouter celui-ci aussi
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -33,6 +35,12 @@ public class CustomerController {
         this.orders = orders;
         this.userService = userService;
         this.appShell = appShell;
+    }
+    // Dans CustomerController.java
+    public void navigateToCustomPage(String title, Node pageContent) {
+        if (appShell != null) {
+            appShell.setContent(title, pageContent);
+        }
     }
 
     /**
@@ -89,10 +97,10 @@ public class CustomerController {
     public List<Order> orders() {
         return orders.userOrders(currentUser.getId());
     }
-    
+
     public List<OrderItem> getOrderItems(int orderId) {
         // Cette méthode doit appeler ton OrderService pour récupérer les items
-        return orders.getOrderItems(orderId); 
+        return orders.getOrderItems(orderId);
     }
     public Product getProductById(int productId) {
         // On demande au service de trouver le produit par son ID

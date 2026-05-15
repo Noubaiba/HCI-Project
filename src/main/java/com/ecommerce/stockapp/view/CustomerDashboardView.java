@@ -55,6 +55,8 @@ import javafx.scene.control.ScrollPane;
 import com.ecommerce.stockapp.model.OrderStatus;
 import com.ecommerce.stockapp.util.IconFactory;
 import com.ecommerce.stockapp.view.NavItem;
+import javafx.scene.Node;
+import javafx.scene.control.PasswordField; // Profites-en pour ajouter celui-ci aussi
 
 
 public class CustomerDashboardView {
@@ -901,253 +903,364 @@ public class CustomerDashboardView {
 
 
     private void showProfile() {
-        // CRITIQUE : On récupère l'utilisateur à jour depuis le controller
+        shell.setSearchHandler(null);
         User user = controller.currentUser();
+        if (user == null) return;
 
-        // --- SECTION 1: PROFIL RÉSUMÉ (Header) ---
-        HBox profileHeader = new HBox(20);
-        profileHeader.getStyleClass().add("profile-card-container");
-        profileHeader.setPadding(new Insets(25));
-        profileHeader.setAlignment(Pos.CENTER_LEFT);
-        profileHeader.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8;");
+        // 1. Conteneur principal
+        VBox mainContainer = new VBox(0);
+        mainContainer.setStyle("-fx-background-color: #f8fafc;");
+        mainContainer.setAlignment(Pos.TOP_CENTER);
+        mainContainer.setPadding(new Insets(10, 0, 40, 0)); // Padding réduit en haut car le titre est déjà présent
 
-        // Avatar (Cercle avec Initiales ou Image)
-        StackPane avatar = new StackPane();
-        Circle circle = new Circle(40, javafx.scene.paint.Color.web("#3b82f6"));
+        // --- 2. CADRE BLANC DU PROFIL ---
+        VBox profileCard = new VBox(0);
+        profileCard.setStyle("-fx-background-color: white; -fx-background-radius: 24;");
+        profileCard.setMaxWidth(900);
+        profileCard.setEffect(new DropShadow(25, Color.rgb(0,0,0,0.06)));
 
-        // On recalcule les initiales (au cas où le nom a changé aussi)
-        String userInitials = (user.getName() != null && user.getName().length() >= 2)
-                ? user.getName().substring(0, 2).toUpperCase()
-                : "??";
-        Label initials = new Label(userInitials);
-        initials.setStyle("-fx-text-fill: white; -fx-font-size: 24px; -fx-font-weight: bold;");
+        // Hero Section (Avatar + Infos)
+        HBox hero = new HBox(30);
+        hero.setPadding(new Insets(60, 50, 45, 50));
+        hero.setAlignment(Pos.CENTER_LEFT);
 
-        // LOGIQUE DE MISE À JOUR DE L'IMAGE
-        if (user.getProfilePicture() != null && !user.getProfilePicture().isEmpty()) {
-            try {
-                // On charge l'image (le String contient l'URI du fichier ou l'URL)
-                Image img = new Image(user.getProfilePicture(), true); // 'true' pour chargement en arrière-plan
-                ImageView iv = new ImageView(img);
-                iv.setFitWidth(80);
-                iv.setFitHeight(80);
-                iv.setPreserveRatio(false); // On force le remplissage du cercle
+        StackPane avatarFrame = new StackPane();
+        Circle innerCircle = new Circle(45, Color.web("#f1f5f9"));
+        Label initial = new Label(user.getName().substring(0, 1).toUpperCase());
+        initial.setStyle("-fx-font-size: 36px; -fx-font-weight: 900; -fx-text-fill: #3b82f6;");
+        avatarFrame.getChildren().addAll(innerCircle, initial);
 
-                // On crée un clip circulaire parfait pour l'image
-                Circle clip = new Circle(40, 40, 40);
-                iv.setClip(clip);
+        VBox textSection = new VBox(2);
+        Label nameLabel = new Label(user.getName().toUpperCase());
+        nameLabel.setStyle("-fx-font-size: 38px; -fx-font-weight: 900; -fx-text-fill: #0f172a; -fx-letter-spacing: -1.2px;");
+        Label emailLabel = new Label(user.getEmail());
+        emailLabel.setStyle("-fx-text-fill: #64748b; -fx-font-size: 16px;");
+        textSection.getChildren().addAll(nameLabel, emailLabel);
 
-                avatar.getChildren().addAll(circle, iv);
-            } catch (Exception e) {
-                // Si l'image ne peut pas être chargée, on remet les initiales
-                avatar.getChildren().addAll(circle, initials);
-                System.err.println("Erreur chargement image showProfile: " + e.getMessage());
-            }
-        } else {
-            // Pas de photo : on met les initiales
-            avatar.getChildren().addAll(circle, initials);
-        }
+        hero.getChildren().addAll(avatarFrame, textSection);
 
-        VBox nameBox = new VBox(5);
-        Label nameLabel = new Label(user.getName());
-        nameLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #1e293b;");
-        Label roleLabel = new Label(user.getRole().toString());
-        roleLabel.setStyle("-fx-text-fill: #64748b; -fx-font-size: 14px;");
+        // Options Container
+        VBox optionsContainer = new VBox(12);
+        optionsContainer.setPadding(new Insets(0, 50, 50, 50));
+        String contactSubtitle = (user.getPhone() != null && !user.getPhone().isEmpty())
+                ? user.getPhone() : "Aucun téléphone enregistré";
 
-        Label statusBadge = new Label(user.getStatus().toString());
-        statusBadge.setStyle("-fx-background-color: #dcfce7; -fx-text-fill: #166534; -fx-padding: 2 10; -fx-background-radius: 10; -fx-font-size: 10px; -fx-font-weight: bold;");
-        nameBox.getChildren().addAll(nameLabel, roleLabel, statusBadge);
+        optionsContainer.getChildren().addAll(
+                createCompatibleRow("Historique des commandes", "Consulter vos achats passés", "📦", this::showOrders),
+                createCompatibleRow("Adresse de livraison", user.getDeliveryAddress(), "📍",
+                        () -> setContent("ADRESSE", createAddressPage())),
+                createCompatibleRow("Sécurité du compte", "Changer votre mot de passe", "🔒",
+                        () -> setContent("SÉCURITÉ", createSecurityPage())),
+                createCompatibleRow("Contact & Support", contactSubtitle, "📱",
+                        () -> setContent("CONTACT", createContactPage()))
+        );
+
+        profileCard.getChildren().addAll(hero, optionsContainer);
+
+        // --- 3. LOGOUT (Bouton discret en bas) ---
+        Button btnLogout = new Button("Se déconnecter");
+        btnLogout.setStyle("-fx-background-color: transparent; -fx-text-fill: #94a3b8; -fx-font-weight: bold; " +
+                "-fx-cursor: hand; -fx-padding: 35; -fx-font-size: 13px;");
+        btnLogout.setOnMouseEntered(e -> btnLogout.setStyle(btnLogout.getStyle() + "-fx-text-fill: #ef4444;"));
+        btnLogout.setOnMouseExited(e -> btnLogout.setStyle(btnLogout.getStyle().replace("-fx-text-fill: #ef4444;", "-fx-text-fill: #94a3b8;")));
+        btnLogout.setOnAction(e -> controller.logout());
+
+        // On assemble sans le bouton retour
+        mainContainer.getChildren().addAll(profileCard, btnLogout);
+
+        // --- 4. SCROLLPANE ---
+        ScrollPane scroll = new ScrollPane(mainContainer);
+        scroll.setFitToWidth(true);
+        scroll.setPannable(true);
+        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.setStyle("-fx-background-color: #f8fafc; -fx-background: #f8fafc; -fx-border-color: transparent;");
+
+        // On utilise le titre standard du Shell
+        setContent("VOTRE PROFIL", scroll);
+    }
+    private HBox createCompatibleRow(String title, String subtitle, String icon, Runnable action) {
+        HBox row = new HBox(20);
+        row.setPadding(new Insets(20, 25, 20, 25));
+        row.setAlignment(Pos.CENTER_LEFT);
+
+        // Fond gris très léger pour rester dans les tons de ton menu à gauche
+        row.setStyle("-fx-background-color: #f8fafc; -fx-background-radius: 12; -fx-border-color: #f1f5f9; -fx-border-width: 1; -fx-border-radius: 12;");
+
+        Label lblIcon = new Label(icon);
+        lblIcon.setStyle("-fx-font-size: 22px;");
+
+        VBox texts = new VBox(2);
+        Label lblTitle = new Label(title);
+        lblTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 15px; -fx-text-fill: #1e293b;");
+
+        Label lblSub = new Label(subtitle != null ? subtitle : "Non défini");
+        lblSub.setStyle("-fx-font-size: 13px; -fx-text-fill: #94a3b8;");
+        texts.getChildren().addAll(lblTitle, lblSub);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        Button btnModifier1 = new Button("Modifier");
-        btnModifier1.getStyleClass().add("btn-outline");
-        btnModifier1.setOnAction(event -> showEditProfile());
+        Label arrow = new Label("→");
+        // On utilise le bleu de ton logo "Stockify" pour l'accent
+        arrow.setStyle("-fx-font-size: 18px; -fx-text-fill: #0ea5e9; -fx-font-weight: bold;");
 
-        // Icône du bouton Modifier
-        try {
-            Image iconImage = new Image(getClass().getResourceAsStream("/images/img.png"));
-            if (iconImage != null) {
-                ImageView iconView = new ImageView(iconImage);
-                iconView.setFitWidth(16); iconView.setFitHeight(16);
-                btnModifier1.setGraphic(iconView);
-                btnModifier1.setGraphicTextGap(10);
-            }
-        } catch (Exception e) {
-            // On ignore si l'icône ne charge pas
-        }
+        row.getChildren().addAll(lblIcon, texts, spacer, arrow);
 
-        profileHeader.getChildren().addAll(avatar, nameBox, spacer, btnModifier1);
+        // --- INTERACTION ---
+        row.setOnMouseEntered(e -> {
+            // Effet de survol blanc pur avec petite ombre
+            row.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-border-color: #0ea5e9; -fx-border-width: 1; -fx-border-radius: 12; -fx-cursor: hand;");
+            row.setEffect(new DropShadow(10, Color.rgb(0,0,0,0.05)));
+        });
 
-        // --- SECTION 2: INFORMATIONS PERSONNELLES ---
-        VBox infoCard = new VBox(20);
-        infoCard.setPadding(new Insets(25));
-        infoCard.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8;");
+        row.setOnMouseExited(e -> {
+            row.setStyle("-fx-background-color: #f8fafc; -fx-background-radius: 12; -fx-border-color: #f1f5f9; -fx-border-width: 1; -fx-border-radius: 12;");
+            row.setEffect(null);
+        });
 
-        Label sectionTitle = new Label("Informations Personnelles");
-        sectionTitle.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #1e293b;");
+        row.setOnMouseClicked(e -> { if (action != null) action.run(); });
 
-        GridPane grid = new GridPane();
-        grid.setHgap(40); grid.setVgap(20);
-        grid.add(createInfoField("Nom complet", user.getName()), 0, 0);
-        grid.add(createInfoField("Adresse Email", user.getEmail()), 0, 1);
-        grid.add(createInfoField("Téléphone", (user.getPhone() != null && !user.getPhone().isEmpty()) ? user.getPhone() : "Non renseigné"), 0, 2);
-        grid.add(createInfoField("Adresse de livraison", (user.getDeliveryAddress() != null && !user.getDeliveryAddress().isEmpty()) ? user.getDeliveryAddress() : "Non renseignée"), 0, 3);
-
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        grid.add(createInfoField("Membre depuis", (user.getCreatedAt() != null) ? user.getCreatedAt().format(formatter) : "Date inconnue"), 0, 4);
-
-        infoCard.getChildren().addAll(sectionTitle, grid);
-
-        VBox profileContainer = new VBox(25, profileHeader, infoCard);
-        profileContainer.setPadding(new Insets(10));
-        ScrollPane scrollPane = new ScrollPane(profileContainer);
-        scrollPane.setFitToWidth(true);
-        scrollPane.setStyle("-fx-background-color: transparent; -fx-background: transparent; -fx-padding: 0;");
-
-        setContent("Profil", scrollPane);
+        return row;
     }
 
-    private void showEditProfile() {
-        User user = controller.currentUser();
-        // Variable pour stocker le chemin de l'image (utilisée dans les événements)
-        final String[] currentPath = {user.getProfilePicture()};
+    private VBox createFormField(String labelText, Node input) {
+        VBox group = new VBox(8);
+        Label label = new Label(labelText);
+        label.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #475569;");
 
-        VBox editForm = new VBox(25);
-        editForm.setPadding(new Insets(25));
-        editForm.setStyle("-fx-background-color: white; -fx-background-radius: 8;");
+        // Style commun pour les champs
+        String inputStyle = "-fx-background-color: #ffffff; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 10 15; -fx-font-size: 14px;";
+        input.setStyle(inputStyle);
 
-        Label title = new Label("Informations personnelles");
-        title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #1e293b;");
+        // Effet au focus (changement de bordure)
+        input.focusedProperty().addListener((obs, old, isFocused) -> {
+            if (isFocused) input.setStyle(inputStyle + "-fx-border-color: #3b82f6; -fx-border-width: 1.5;");
+            else input.setStyle(inputStyle);
+        });
 
-        // --- SECTION PHOTO DE PROFIL DYNAMIQUE ---
-        VBox photoSection = new VBox(10);
-        Label lblPhoto = new Label("Photo de profil");
-        lblPhoto.setStyle("-fx-text-fill: #64748b;");
+        group.getChildren().addAll(label, input);
+        return group;
+    }
 
-        HBox photoRow = new HBox(15);
-        photoRow.setAlignment(Pos.CENTER_LEFT);
+    private VBox createBaseCard() {
+        VBox card = new VBox(25);
+        card.setMaxWidth(650);
+        card.setPadding(new Insets(35));
+        card.setStyle("-fx-background-color: white; -fx-background-radius: 16; -fx-border-color: #f1f5f9; -fx-border-width: 1;");
+        card.setEffect(new DropShadow(20, Color.rgb(0, 0, 0, 0.04)));
+        return card;
+    }
+    private Button createModernBackButton(Runnable action) {
+        Button btn = new Button("←");
+        btn.setStyle("-fx-background-color: white; -fx-text-fill: #1e293b; -fx-font-size: 18px; " +
+                "-fx-background-radius: 50; -fx-min-width: 45; -fx-min-height: 45; " +
+                "-fx-border-color: #e2e8f0; -fx-border-radius: 50; -fx-cursor: hand;");
 
-        StackPane avatarContainer = new StackPane();
-        Circle circle = new Circle(30, javafx.scene.paint.Color.web("#3b82f6"));
+        // Effet d'élévation et de mouvement au survol
+        btn.setOnMouseEntered(e -> {
+            btn.setStyle(btn.getStyle() + "-fx-border-color: #3b82f6; -fx-text-fill: #3b82f6;");
+            btn.setTranslateX(-3); // Petit décalage vers la gauche
+        });
+        btn.setOnMouseExited(e -> {
+            btn.setStyle(btn.getStyle().replace("-fx-border-color: #3b82f6; -fx-text-fill: #3b82f6;", "-fx-border-color: #e2e8f0; -fx-text-fill: #1e293b;"));
+            btn.setTranslateX(0);
+        });
+        btn.setOnAction(e -> action.run());
+        return btn;
+    }
 
-        // Initiales par défaut
-        Label initials = new Label(user.getName().substring(0, Math.min(2, user.getName().length())).toUpperCase());
-        initials.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
+    private VBox createModernField(String labelText, Node input, String iconEmoji) {
+        VBox group = new VBox(10);
 
-        // Bouton Modifier / Choisir
-        Button btnAction = new Button();
-        btnAction.setStyle("-fx-background-color: #f1f5f9; -fx-text-fill: #3b82f6; -fx-background-radius: 20; -fx-font-weight: bold;");
+        Label label = new Label(labelText);
+        label.setStyle("-fx-font-size: 11px; -fx-font-weight: 900; -fx-text-fill: #64748b; -fx-letter-spacing: 0.8px;");
 
-        // Bouton Supprimer (Rouge)
-        Button btnDelete = new Button("Supprimer");
-        btnDelete.setStyle("-fx-background-color: transparent; -fx-text-fill: #ef4444; -fx-font-weight: bold;");
+        HBox inputWrapper = new HBox(12);
+        inputWrapper.setAlignment(Pos.CENTER_LEFT);
+        inputWrapper.setPadding(new Insets(0, 15, 0, 15));
+        inputWrapper.setStyle("-fx-background-color: #f8fafc; -fx-border-color: #e2e8f0; -fx-border-radius: 12; -fx-background-radius: 12;");
 
-        Label lblFileHint = new Label("JPG, PNG, GIF jusqu'à 2MB");
-        lblFileHint.setStyle("-fx-text-fill: #94a3b8; -fx-font-size: 11px;");
+        Label icon = new Label(iconEmoji);
+        icon.setStyle("-fx-font-size: 16px;");
 
-        // --- FONCTION DE MISE À JOUR DE L'APPARENCE DE LA PHOTO ---
-        Runnable refreshPhotoUI = () -> {
-            avatarContainer.getChildren().clear();
-            photoRow.getChildren().clear();
-            photoRow.getChildren().add(avatarContainer);
+        input.setStyle("-fx-background-color: transparent; -fx-border-color: transparent; -fx-padding: 12 0; -fx-font-size: 14px; -fx-text-fill: #1e293b;");
+        HBox.setHgrow(input, Priority.ALWAYS);
 
-            if (currentPath[0] != null && !currentPath[0].isEmpty()) {
-                // État avec Image
-                try {
-                    Image img = new Image(currentPath[0]);
-                    ImageView iv = new ImageView(img);
-                    iv.setFitWidth(60); iv.setFitHeight(60);
-                    iv.setClip(new Circle(30, 30, 30));
-                    avatarContainer.getChildren().addAll(circle, iv);
+        inputWrapper.getChildren().addAll(icon, input);
 
-                    btnAction.setText("Modifier l'image");
-                    photoRow.getChildren().addAll(btnAction, btnDelete);
-                } catch (Exception e) {
-                    avatarContainer.getChildren().addAll(circle, initials);
-                    btnAction.setText("Choisir un fichier");
-                    photoRow.getChildren().addAll(btnAction, lblFileHint);
-                }
+        // Effet Focus sur le wrapper complet
+        input.focusedProperty().addListener((obs, old, isFocused) -> {
+            if (isFocused) {
+                inputWrapper.setStyle("-fx-background-color: white; -fx-border-color: #3b82f6; -fx-border-width: 1.5; -fx-border-radius: 12; -fx-background-radius: 12;");
+                inputWrapper.setEffect(new DropShadow(10, Color.rgb(59, 130, 246, 0.1)));
             } else {
-                // État avec Initiales (Supprimé ou Vide)
-                avatarContainer.getChildren().addAll(circle, initials);
-                btnAction.setText("Choisir un fichier");
-                photoRow.getChildren().addAll(btnAction, lblFileHint);
-            }
-        };
-
-        // Actions des boutons photo
-        btnAction.setOnAction(e -> {
-            javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
-            fileChooser.getExtensionFilters().add(new javafx.stage.FileChooser.ExtensionFilter("Images", "*.png", "*.jpg", "*.gif"));
-            java.io.File selectedFile = fileChooser.showOpenDialog(editForm.getScene().getWindow());
-            if (selectedFile != null) {
-                currentPath[0] = selectedFile.toURI().toString();
-                refreshPhotoUI.run();
+                inputWrapper.setStyle("-fx-background-color: #f8fafc; -fx-border-color: #e2e8f0; -fx-border-radius: 12; -fx-background-radius: 12;");
+                inputWrapper.setEffect(null);
             }
         });
 
-        btnDelete.setOnAction(e -> {
-            currentPath[0] = null;
-            refreshPhotoUI.run();
-        });
-
-        // Initialisation de la vue photo
-        refreshPhotoUI.run();
-        photoSection.getChildren().addAll(lblPhoto, photoRow);
-
-        // --- FORMULAIRE ---
-        VBox fieldsBox = new VBox(15);
-
-        TextField txtNom = createEditField(fieldsBox, "Nom complet *", user.getName());
-        TextField txtEmail = createEditField(fieldsBox, "Adresse e-mail *", user.getEmail());
-        TextField txtPhone = createEditField(fieldsBox, "Téléphone", (user.getPhone() != null) ? user.getPhone() : "");
-        TextField txtAdresse = createEditField(fieldsBox, "Adresse de livraison", (user.getDeliveryAddress() != null) ? user.getDeliveryAddress() : "");
-
-        // --- CHAMPS DE MOT DE PASSE ---
-        PasswordField txtCurrentPass = createPasswordField(fieldsBox, "Mot de passe actuel ");
-        PasswordField txtNewPass = createPasswordField(fieldsBox, "Nouveau mot de passe");
-        PasswordField txtConfirmPass = createPasswordField(fieldsBox, "Confirmer le mot de passe");
-
-        // --- BOUTONS D'ACTION ---
-        HBox actions = new HBox(15);
-        actions.setAlignment(Pos.CENTER_RIGHT);
-        actions.setPadding(new Insets(20, 0, 0, 0));
-
-        Button btnCancel = new Button("Annuler");
-        btnCancel.setStyle("-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-text-fill: #64748b;");
-        btnCancel.setOnAction(e -> showProfile());
-
-        Button btnSave = new Button("Enregistrer les modifications");
-        btnSave.setStyle("-fx-background-color: #2563eb; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8;");
-        btnSave.setPrefHeight(40);
-        btnSave.setMinWidth(220);
-
-        btnSave.setOnAction(e -> {
-            // Mise à jour des données
-            user.setName(txtNom.getText());
-            user.setPhone(txtPhone.getText());
-            user.setDeliveryAddress(txtAdresse.getText());
-            user.setProfilePicture(currentPath[0]);
-
-            try {
-                controller.updateProfile(user);
-                showModernSuccess("Votre profil a été mis à jour avec succès !");
-                showProfile();
-            } catch (Exception ex) {
-                Ui.error(ex);
-            }
-        });
-
-        actions.getChildren().addAll(btnCancel, btnSave);
-        editForm.getChildren().addAll(title, photoSection, fieldsBox, actions);
-
-        ScrollPane scroll = new ScrollPane(editForm);
-        scroll.setFitToWidth(true);
-        scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent; -fx-padding: 0;");
-
-        setContent("Modifier le profil", scroll);
+        group.getChildren().addAll(label, inputWrapper);
+        return group;
     }
+    private ScrollPane wrapInScrollPane(Node content) {
+        ScrollPane scrollPane = new ScrollPane(content);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setPannable(true);
+
+        // Supprime la bordure et met le fond en blanc
+        scrollPane.setStyle("-fx-background-color: white; -fx-background: white; -fx-border-color: transparent;");
+
+        // Pour masquer totalement la barre visuellement tout en gardant le scroll actif :
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER); // La barre ne s'affichera JAMAIS
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+
+        return scrollPane;
+    }
+    private Node createAddressPage() {
+        VBox container = new VBox(30);
+        container.setPadding(new Insets(60));
+        container.setStyle("-fx-background-color: white;");
+        container.setAlignment(Pos.TOP_CENTER);
+
+        Button backBtn = createModernBackButton(this::showProfile);
+        HBox backWrapper = new HBox(backBtn);
+        backWrapper.setMaxWidth(500);
+
+        VBox card = new VBox(20);
+        card.setMaxWidth(500);
+
+        Label title = new Label("Adresse de livraison");
+        title.setStyle("-fx-font-size: 28px; -fx-font-weight: 800; -fx-text-fill: #0f172a; -fx-padding: 0 0 10 0;");
+
+        // Séparation de l'adresse
+        String fullAddr = controller.currentUser().getDeliveryAddress() != null ? controller.currentUser().getDeliveryAddress() : "";
+        String[] parts = fullAddr.split(", ");
+
+        TextField streetField = new TextField(parts.length > 0 ? parts[0] : "");
+        TextField cityField = new TextField(parts.length > 1 ? parts[1] : "");
+        TextField zipField = new TextField(parts.length > 2 ? parts[2] : "");
+
+        // Utilisation de la version sans icône (Option 1)
+        VBox streetGroup = createModernField("RUE ET NUMÉRO", streetField, "Ex: 123 Rue des Fleurs");
+
+        HBox cityZipRow = new HBox(15);
+        VBox cityGroup = createModernField("VILLE", cityField, "Casablanca");
+        VBox zipGroup = createModernField("CODE POSTAL", zipField, "20000");
+        HBox.setHgrow(cityGroup, Priority.ALWAYS);
+        HBox.setHgrow(zipGroup, Priority.ALWAYS);
+        cityZipRow.getChildren().addAll(cityGroup, zipGroup);
+
+        Button saveBtn = new Button("Enregistrer l'adresse");
+        saveBtn.setMaxWidth(Double.MAX_VALUE);
+        saveBtn.setStyle("-fx-background-color: #0f172a; -fx-text-fill: white; -fx-font-weight: bold; " +
+                "-fx-padding: 16; -fx-background-radius: 10; -fx-cursor: hand;");
+
+        // Ajout d'une petite marge au dessus du bouton
+        VBox.setMargin(saveBtn, new Insets(15, 0, 0, 0));
+
+        saveBtn.setOnAction(e -> {
+            String combined = streetField.getText() + ", " + cityField.getText() + ", " + zipField.getText();
+            controller.currentUser().setDeliveryAddress(combined);
+            controller.updateProfile(controller.currentUser());
+            showProfile();
+        });
+
+        card.getChildren().addAll(title, streetGroup, cityZipRow, saveBtn);
+        container.getChildren().addAll(backWrapper, card);
+
+        return wrapInScrollPane(container);
+    }
+    private Node createContactPage() {
+        VBox container = new VBox(30);
+        container.setPadding(new Insets(40, 60, 60, 60));
+        container.setStyle("-fx-background-color: white;");
+        container.setAlignment(Pos.TOP_CENTER);
+
+        Button backBtn = createModernBackButton(this::showProfile);
+        HBox backWrapper = new HBox(backBtn);
+        backWrapper.setMaxWidth(550);
+
+        VBox card = new VBox(35);
+        card.setMaxWidth(550);
+
+        Label title = new Label("Coordonnées");
+        title.setStyle("-fx-font-size: 32px; -fx-font-weight: 900; -fx-text-fill: #0f172a; -fx-letter-spacing: -1px;");
+
+        TextField nameField = new TextField(controller.currentUser().getName());
+        TextField emailField = new TextField(controller.currentUser().getEmail());
+        TextField phoneField = new TextField(controller.currentUser().getPhone());
+        phoneField.setPromptText("+212 600 000 000");
+
+        Button saveBtn = new Button("Mettre à jour le profil");
+        saveBtn.setMaxWidth(Double.MAX_VALUE);
+        saveBtn.setStyle("-fx-background-color: linear-gradient(to right, #3b82f6, #2563eb); -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 16; -fx-background-radius: 12; -fx-cursor: hand;");
+
+        saveBtn.setOnAction(e -> {
+            User u = controller.currentUser();
+            u.setName(nameField.getText());
+            u.setEmail(emailField.getText());
+            u.setPhone(phoneField.getText());
+            controller.updateProfile(u);
+            showProfile();
+        });
+
+        card.getChildren().addAll(
+                title,
+                createModernField("NOM COMPLET", nameField, "👤"),
+                createModernField("ADRESSE EMAIL", emailField, "📧"),
+                createModernField("TÉLÉPHONE", phoneField, "📱"),
+                saveBtn
+        );
+
+        container.getChildren().addAll(backWrapper, card);
+        return wrapInScrollPane(container);
+    }
+    private Node createSecurityPage() {
+        VBox container = new VBox(30);
+        container.setPadding(new Insets(40, 60, 60, 60));
+        container.setStyle("-fx-background-color: white;");
+        container.setAlignment(Pos.TOP_CENTER);
+
+        Button backBtn = createModernBackButton(this::showProfile);
+        HBox backWrapper = new HBox(backBtn);
+        backWrapper.setMaxWidth(550);
+
+        VBox card = new VBox(35);
+        card.setMaxWidth(550);
+
+        Label title = new Label("Sécurité du compte");
+        title.setStyle("-fx-font-size: 32px; -fx-font-weight: 900; -fx-text-fill: #0f172a; -fx-letter-spacing: -1px;");
+
+        PasswordField currentPass = new PasswordField();
+        PasswordField newPass = new PasswordField();
+        PasswordField confirmPass = new PasswordField();
+
+        Button saveBtn = new Button("Changer le mot de passe");
+        saveBtn.setMaxWidth(Double.MAX_VALUE);
+        saveBtn.setStyle("-fx-background-color: #ef4444; -fx-text-fill: white; -fx-font-weight: 800; -fx-padding: 16; -fx-background-radius: 12; -fx-cursor: hand;");
+
+        saveBtn.setOnAction(e -> {
+            if (newPass.getText().isEmpty() || !newPass.getText().equals(confirmPass.getText())) {
+                confirmPass.getParent().setStyle("-fx-background-color: #fff1f2; -fx-border-color: #ef4444; -fx-border-radius: 12; -fx-background-radius: 12;");
+            } else {
+                // Ici tu appelles ton controller pour changer le password
+                showProfile();
+            }
+        });
+
+        card.getChildren().addAll(
+                title,
+                createModernField("MOT DE PASSE ACTUEL", currentPass, "🔒"),
+                createModernField("NOUVEAU MOT DE PASSE", newPass, "🔑"),
+                createModernField("CONFIRMER LE MOT DE PASSE", confirmPass, "✅"),
+                saveBtn
+        );
+
+        container.getChildren().addAll(backWrapper, card);
+        return wrapInScrollPane(container);
+    }
+
 
     public void showModernSuccess(String message) {
         Stage dialog = new Stage();
