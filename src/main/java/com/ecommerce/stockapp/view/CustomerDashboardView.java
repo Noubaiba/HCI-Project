@@ -66,6 +66,7 @@ public class CustomerDashboardView {
     public Parent render() {
         // On injecte les actions (Catalog, Cart, etc.) dans le shell
         shell.setNavItems(navItems());
+        shell.updateCartCount(controller.cart().size());
 
         // On affiche le premier écran
         showCatalog();
@@ -73,7 +74,7 @@ public class CustomerDashboardView {
         return shell.render();
     }
 
-//    private void showCatalog() {
+    //    private void showCatalog() {
 //        // 1. Petit Header Noir (Promo)
 //        Label promoLabel = new Label("LIVRAISON GRATUITE DÈS 39€ D'ACHAT | RETOURS GRATUITS");
 //        promoLabel.setStyle("-fx-background-color: black; -fx-text-fill: white; -fx-font-size: 11px; -fx-padding: 8px; -fx-font-weight: bold;");
@@ -91,11 +92,11 @@ public class CustomerDashboardView {
 //        categoryScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER); // INTERDIT le scroll haut/bas
 //        categoryScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED); // Autorise gauche/droite
 //        categoryScroll.setFitToHeight(true);
-//        
+//
 //        // ON AUGMENTE LA HAUTEUR ICI (60px au lieu de automatique)
-//        categoryScroll.setMinHeight(60); 
+//        categoryScroll.setMinHeight(60);
 //        categoryScroll.setPrefHeight(60);
-//        
+//
 //        categoryScroll.setStyle("-fx-background-color: white; -fx-background: white; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
 //
 //        FlowPane grid = new FlowPane(15, 15);
@@ -105,16 +106,16 @@ public class CustomerDashboardView {
 //        java.util.function.Consumer<String> filterAction = (categoryName) -> {
 //            grid.getChildren().clear();
 //            controller.products("").stream()
-//                    .filter(p -> categoryName.equals("TOUT VOIR") || 
+//                    .filter(p -> categoryName.equals("TOUT VOIR") ||
 //                            (p.getCategoryName() != null && p.getCategoryName().equalsIgnoreCase(categoryName)))
 //                    .forEach(product -> grid.getChildren().add(productCard(product)));
-//            
+//
 //            categoryBar.getChildren().forEach(node -> {
 //                if (node instanceof Button b) {
 //                    // FORCE LE TEXTE A S'AFFICHER EN ENTIER
-//                    b.setMinWidth(Region.USE_PREF_SIZE); 
+//                    b.setMinWidth(Region.USE_PREF_SIZE);
 //                    b.setMinHeight(50); // Boutons plus hauts pour cliquer facilement
-//                    
+//
 //                    if (b.getText().equals(categoryName)) {
 //                        b.setStyle("-fx-background-color: transparent; -fx-font-weight: bold; -fx-text-fill: black; -fx-border-color: black; -fx-border-width: 0 0 3 0; -fx-cursor: hand;");
 //                    } else {
@@ -202,8 +203,8 @@ public class CustomerDashboardView {
 
         mainProductScroll.setStyle(
                 "-fx-background-color: white;" +
-                "-fx-background: white;" +
-                "-fx-border-color: transparent;"
+                        "-fx-background: white;" +
+                        "-fx-border-color: transparent;"
         );
 
         // FILTER LOGIC
@@ -225,19 +226,19 @@ public class CustomerDashboardView {
                     if (b.getText().equals(categoryName)) {
                         b.setStyle(
                                 "-fx-background-color: transparent;" +
-                                "-fx-font-weight: bold;" +
-                                "-fx-text-fill: black;" +
-                                "-fx-border-color: black;" +
-                                "-fx-border-width: 0 0 3 0;" +
-                                "-fx-cursor: hand;"
+                                        "-fx-font-weight: bold;" +
+                                        "-fx-text-fill: black;" +
+                                        "-fx-border-color: black;" +
+                                        "-fx-border-width: 0 0 3 0;" +
+                                        "-fx-cursor: hand;"
                         );
                     } else {
                         b.setStyle(
                                 "-fx-background-color: transparent;" +
-                                "-fx-font-weight: normal;" +
-                                "-fx-text-fill: #666;" +
-                                "-fx-border-color: transparent;" +
-                                "-fx-cursor: hand;"
+                                        "-fx-font-weight: normal;" +
+                                        "-fx-text-fill: #666;" +
+                                        "-fx-border-color: transparent;" +
+                                        "-fx-cursor: hand;"
                         );
                     }
                 }
@@ -303,7 +304,7 @@ public class CustomerDashboardView {
         ImageView addIcon = new ImageView(new Image(getClass().getResource("/images/icons/addtocart.png").toExternalForm()));
         addIcon.setFitWidth(24); addIcon.setFitHeight(24);
         addIcon.setCursor(javafx.scene.Cursor.HAND);
-        
+
 //        addIcon.setOnMouseClicked(e -> {
 //            if (product.getQuantity() > 0) {
 //                run(() -> {
@@ -325,7 +326,7 @@ public class CustomerDashboardView {
         VBox card = new VBox(0, visual, detailsBox); // Spacing à 0 entre l'image et le texte
         card.setPrefWidth(200);
         card.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #eee; -fx-border-radius: 8;");
-        
+
         // Effet d'ombre au survol
         card.setOnMouseEntered(e -> card.setEffect(new DropShadow(10, Color.rgb(0,0,0,0.1))));
         card.setOnMouseExited(e -> card.setEffect(null));
@@ -333,7 +334,7 @@ public class CustomerDashboardView {
         return card;
     }
 
-    
+
     private void showProductDetails(Product product) {
         Stage dialog = new Stage();
         dialog.initModality(Modality.APPLICATION_MODAL);
@@ -436,12 +437,12 @@ public class CustomerDashboardView {
         dialog.setScene(scene);
         dialog.showAndWait();
     }
-    
-//    private StackPane productVisual(Product product) {
+
+    //    private StackPane productVisual(Product product) {
 //        StackPane container = new StackPane();
 //        container.setPrefHeight(220); // Hauteur plus grande pour le style SHEIN
 //        container.setMaxWidth(Double.MAX_VALUE);
-//        
+//
 //        // Empêche le StackPane de limiter la taille de l'image
 //        container.setStyle("-fx-background-color: #f7f7f7; -fx-background-radius: 8 8 0 0; -fx-overflow: hidden;");
 //
@@ -449,18 +450,18 @@ public class CustomerDashboardView {
 //            try {
 //                Image img = new Image(resolveImage(product.getImageUrl()), true);
 //                ImageView iv = new ImageView(img);
-//                
+//
 //                // --- CONFIGURATION STYLE SHEIN ---
 //                iv.setPreserveRatio(true);
 //                // On lie la largeur de l'image à celle du container pour qu'elle prenne toute la place
 //                iv.fitWidthProperty().bind(container.widthProperty());
-//                iv.setFitHeight(220); 
-//                
+//                iv.setFitHeight(220);
+//
 //                container.getChildren().add(iv);
 //                return container;
 //            } catch (Exception ignored) {}
 //        }
-//        
+//
 //        Label glyph = new Label(productGlyph(product.getCategoryName()));
 //        glyph.setStyle("-fx-font-size: 50;");
 //        container.getChildren().add(glyph);
@@ -763,16 +764,16 @@ public class CustomerDashboardView {
     }
 
 
-//    private void showOrders() {
+    //    private void showOrders() {
 //        shell.setSearchHandler(null);
-//        
+//
 //        VBox container = new VBox(20);
 //        container.setPadding(new Insets(30));
 //        container.setStyle("-fx-background-color: #f8f9fa;"); // Gris très clair moderne
 //        container.setAlignment(Pos.TOP_CENTER);
 //
 //        List<Order> orders = controller.orders();
-//        
+//
 //        if (orders.isEmpty()) {
 //            Label emptyLabel = new Label("VOUS N'AVEZ PAS ENCORE DE COMMANDES");
 //            emptyLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #999; -fx-font-weight: bold;");
@@ -786,13 +787,13 @@ public class CustomerDashboardView {
 //        ScrollPane scroll = new ScrollPane(container);
 //        scroll.setFitToWidth(true);
 //        scroll.setStyle("-fx-background-color: transparent; -fx-background: #f8f9fa;");
-//        
+//
 //        setContent("MES COMMANDES", scroll);
 //    }
- // Assure-toi que les 4 paramètres sont bien là
+    // Assure-toi que les 4 paramètres sont bien là
     private Button createFilterButton(String text, boolean active, List<Order> allOrders, VBox container, HBox filterParent) {
         Button b = new Button(text);
-        
+
         // On définit les styles dans des variables pour plus de clarté
         String activeStyle = "-fx-background-color: #1a237e; -fx-text-fill: white; -fx-background-radius: 20; -fx-padding: 8 20; -fx-cursor: hand; -fx-font-weight: bold;";
         String inactiveStyle = "-fx-background-color: white; -fx-text-fill: #1a237e; -fx-border-color: #1a237e; -fx-background-radius: 20; -fx-border-radius: 20; -fx-padding: 8 20; -fx-cursor: hand; -fx-font-weight: bold;";
@@ -819,12 +820,12 @@ public class CustomerDashboardView {
                 }
             }
         });
-        
+
         return b;
     }
     private void showOrders() {
         shell.setSearchHandler(null);
-        
+
         // 1. RÉCUPÉRATION DES DONNÉES
         List<Order> orders = controller.orders();
 
@@ -839,7 +840,7 @@ public class CustomerDashboardView {
                 .filter(o -> o.getStatus() == OrderStatus.DELIVERED || o.getStatus() == OrderStatus.PAID).count();
 
         // 3. CRÉATION DU CONTENEUR DE LISTE (Une seule fois !)
-        VBox ordersList = new VBox(15); 
+        VBox ordersList = new VBox(15);
         if (orders.isEmpty()) {
             ordersList.getChildren().add(new Label("Aucune commande dans votre historique."));
         } else {
@@ -851,21 +852,21 @@ public class CustomerDashboardView {
         // 4. CRÉATION DES FILTRES (En utilisant le ordersList créé juste au-dessus)
         HBox filterBox = new HBox(15);
         filterBox.getChildren().addAll(
-        	    createFilterButton("Toutes", true, orders, ordersList, filterBox),
-        	    createFilterButton("PAID", false, orders, ordersList, filterBox),
-        	    createFilterButton("PENDING", false, orders, ordersList, filterBox),
-        	    createFilterButton("DELIVERED", false, orders, ordersList, filterBox),
-        	    createFilterButton("CANCELLED", false, orders, ordersList, filterBox)
-        	);
+                createFilterButton("Toutes", true, orders, ordersList, filterBox),
+                createFilterButton("PAID", false, orders, ordersList, filterBox),
+                createFilterButton("PENDING", false, orders, ordersList, filterBox),
+                createFilterButton("DELIVERED", false, orders, ordersList, filterBox),
+                createFilterButton("CANCELLED", false, orders, ordersList, filterBox)
+        );
 
         // 5. SECTION STATS (En Bleu Marin pour la visibilité)
         HBox statsBox = new HBox(20);
         statsBox.setAlignment(Pos.CENTER);
         statsBox.getChildren().addAll(
-            createStatCard("Total commandes", String.valueOf(totalCount), "Historique complet"),
-            createStatCard("Total dépensé", totalMoney + " MAD", "Toutes périodes"),
-            createStatCard("En attente", String.valueOf(pendingCount), "À traiter"),
-            createStatCard("Livrées", String.valueOf(deliveredCount), "Compte client")
+                createStatCard("Total commandes", String.valueOf(totalCount), "Historique complet"),
+                createStatCard("Total dépensé", totalMoney + " MAD", "Toutes périodes"),
+                createStatCard("En attente", String.valueOf(pendingCount), "À traiter"),
+                createStatCard("Livrées", String.valueOf(deliveredCount), "Compte client")
         );
 
         // 6. ASSEMBLAGE FINAL
@@ -876,15 +877,15 @@ public class CustomerDashboardView {
         ScrollPane scroll = new ScrollPane(mainLayout);
         scroll.setFitToWidth(true);
         scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
-        
+
         setContent("MES COMMANDES", scroll);
     }
-//    private HBox createOrderCard(Order order) {
+    //    private HBox createOrderCard(Order order) {
 //        HBox card = new HBox(20);
 //        card.setAlignment(Pos.CENTER_LEFT);
 //        card.setPadding(new Insets(20));
 //        card.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #eee; -fx-border-width: 1;");
-//        
+//
 //        // Ombre légère
 //        card.setEffect(new DropShadow(10, Color.rgb(0,0,0,0.05)));
 //
@@ -892,7 +893,7 @@ public class CustomerDashboardView {
 //        VBox info = new VBox(5);
 //        Label idLabel = new Label("Commande #" + order.getId());
 //        idLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
-//        
+//
 //        Label dateLabel = new Label(order.getDate().toString());
 //        dateLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 12px;");
 //        info.getChildren().addAll(idLabel, dateLabel);
@@ -914,7 +915,7 @@ public class CustomerDashboardView {
 //        btnDetails.setOnAction(e -> showOrderDetails(order)); // On passe à la vue des order_items
 //
 //        card.getChildren().addAll(info, statusLabel, spacer, totalLabel, btnDetails);
-//        
+//
 //        // Animation au survol
 //        card.setOnMouseEntered(e -> card.setStyle("-fx-background-color: #fafafa; -fx-background-radius: 8; -fx-border-color: #ddd; -fx-border-width: 1;"));
 //        card.setOnMouseExited(e -> card.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #eee; -fx-border-width: 1;"));
@@ -926,7 +927,7 @@ public class CustomerDashboardView {
         row.setAlignment(Pos.CENTER_LEFT);
         row.setPadding(new Insets(20));
         row.setStyle("-fx-background-color: white; -fx-background-radius: 15; -fx-border-color: #d1d9e6; -fx-border-width: 1;");
-        
+
         // Icône en Bleu Marin
         Label iconLabel = new Label("📦");
         iconLabel.setStyle("-fx-font-size: 20px; -fx-text-fill: #1a237e;");
@@ -938,10 +939,10 @@ public class CustomerDashboardView {
         Label id = new Label("Commande #" + order.getId());
         // On force le NOIR ou MARINE ici pour que ça apparaisse !
         id.setStyle("-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #1a237e;");
-        
+
         Label date = new Label(order.getDate().toString());
         date.setStyle("-fx-text-fill: #555; -fx-font-size: 13px;");
-        
+
         info.getChildren().addAll(id, date);
 
         Region spacer = new Region();
@@ -958,7 +959,7 @@ public class CustomerDashboardView {
         return row;
     }
 
-    
+
     private void showOrderDetails(Order order) {
         VBox root = new VBox(20);
         root.setPadding(new Insets(30));
@@ -998,9 +999,9 @@ public class CustomerDashboardView {
         StackPane imageContainer = new StackPane();
         imageContainer.setPrefSize(100, 100);
         imageContainer.setStyle("-fx-background-color: #f8f9fa; -fx-background-radius: 10;");
-        
+
         // On récupère l'image réelle via l'URL stockée dans le produit
-//        String imageUrl = controller.getImageUrl(item.getProductId()); 
+//        String imageUrl = controller.getImageUrl(item.getProductId());
 //        if (imageUrl != null && !imageUrl.isEmpty()) {
 //            ImageView iv = new ImageView(new Image(imageUrl, true)); // 'true' pour chargement en arrière-plan
 //            iv.setFitWidth(100);
@@ -1012,7 +1013,7 @@ public class CustomerDashboardView {
 //            placeholder.setStyle("-fx-font-size: 30px;");
 //            imageContainer.getChildren().add(placeholder);
 //        }
-     // 1. On récupère le produit complet via son ID pour avoir accès à getImageUrl()
+        // 1. On récupère le produit complet via son ID pour avoir accès à getImageUrl()
         Product p = controller.getProductById(item.getProductId());
 
         String imageUrl = null;
@@ -1041,11 +1042,11 @@ public class CustomerDashboardView {
         // --- 2. NOM DU PRODUIT (Avec retour à la ligne) ---
         VBox details = new VBox(5);
         details.setPrefWidth(400); // On limite la largeur pour forcer le retour à la ligne
-        
+
         Label name = new Label(item.getProductName());
         name.setWrapText(true); // <--- TRÈS IMPORTANT : active le retour à la ligne
         name.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #1a237e;");
-        
+
         details.getChildren().add(name);
 
         Region spacer = new Region();
@@ -1054,13 +1055,13 @@ public class CustomerDashboardView {
         // --- 3. PRIX ET QUANTITÉ (Alignés à droite) ---
         VBox priceTag = new VBox(5);
         priceTag.setAlignment(Pos.CENTER_RIGHT);
-        
+
         Label price = new Label(item.getPrice() + " MAD");
         price.setStyle("-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #e74c3c;");
-        
+
         Label qty = new Label("Qté: " + item.getQuantity());
         qty.setStyle("-fx-text-fill: #e74c3c; -fx-font-size: 13px;");
-        
+
         priceTag.getChildren().addAll(price, qty);
 
         row.getChildren().addAll(imageContainer, details, spacer, priceTag);
@@ -1075,17 +1076,17 @@ public class CustomerDashboardView {
 
         Label t = new Label(title);
         t.setStyle("-fx-text-fill: #5c6bc0; -fx-font-size: 13px; -fx-font-weight: bold;"); // Bleu gris
-        
+
         Label v = new Label(value);
         v.setStyle("-fx-text-fill: #1a237e; -fx-font-weight: bold; -fx-font-size: 24px;"); // BLEU MARINE
-        
+
         Label s = new Label(subText);
         s.setStyle("-fx-text-fill: #7986cb; -fx-font-size: 11px;");
 
         card.getChildren().addAll(t, v, s);
         return card;
     }
-    
+
 
     private void showProfile() {
         // CRITIQUE : On récupère l'utilisateur à jour depuis le controller
@@ -1419,13 +1420,13 @@ public class CustomerDashboardView {
     private void run(Runnable a) {
         try { a.run(); } catch (Exception e) { Ui.error(e); }
     }
-    
+
     public List<AppShell.NavItem> navItems() {
         return List.of(
-            new AppShell.NavItem("/images/icons/catalog.jpeg", "Catalog", this::showCatalog),
-            new AppShell.NavItem("/images/icons/cart.png", "Cart", this::showCart),
-            new AppShell.NavItem("/images/icons/orders.png", "Orders", this::showOrders),
-            new AppShell.NavItem("/images/icons/profil.png", "Profile", this::showProfile)
+                new AppShell.NavItem("/images/icons/catalog.jpeg", "Catalog", this::showCatalog),
+                new AppShell.NavItem("/images/icons/cart.png", "Cart", this::showCart),
+                new AppShell.NavItem("/images/icons/orders.png", "Orders", this::showOrders),
+                new AppShell.NavItem("/images/icons/profil.png", "Profile", this::showProfile)
         );
     }
 }

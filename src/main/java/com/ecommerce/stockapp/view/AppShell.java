@@ -17,6 +17,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 public class AppShell {
@@ -39,14 +40,14 @@ public class AppShell {
     private String currentTitle = "Dashboard";
     private String searchText = "";
     private Consumer<String> searchHandler;
-    
+
     private Label cartBadge;
-	 public void updateCartCount(int count) {
-	     if (cartBadge != null) {
-	         cartBadge.setText(String.valueOf(count));
-	         cartBadge.setVisible(count > 0);
-	     }
-	 }
+    public void updateCartCount(int count) {
+        if (cartBadge != null) {
+            cartBadge.setText(String.valueOf(count));
+            cartBadge.setVisible(count > 0);
+        }
+    }
 
     public AppShell(User user, List<NavItem> navItems, Runnable logout) {
         this.user = user;
@@ -147,6 +148,7 @@ public class AppShell {
     public void setNavItems(List<NavItem> items) {
         this.navBox.getChildren().clear(); // On vide l'ancienne liste
         this.collapsibleNodes.removeIf(node -> node instanceof Label && node.getStyleClass().contains("shell-nav-label")); // Nettoyage
+        this.activeButton = null;
 
         for (NavItem item : items) {
             Button button = navButton(item);
@@ -176,6 +178,7 @@ public class AppShell {
         button.setGraphic(graphic);
         button.getStyleClass().add("shell-nav-button");
         button.setMaxWidth(Double.MAX_VALUE);
+        button.getProperties().put("navLabel", item.label());
         button.setOnAction(e -> {
             if (activeButton != null) {
                 activeButton.getStyleClass().remove("active");
@@ -197,61 +200,96 @@ public class AppShell {
         search.setText(searchText);
         search.getStyleClass().add("shell-search");
         search.setPrefWidth(300);
+        search.setDisable(searchHandler == null);
+        search.setOnAction(e -> triggerSearch(search.getText()));
+        search.textProperty().addListener((obs, oldValue, newValue) -> {
+            searchText = newValue == null ? "" : newValue;
+            if (searchHandler != null) {
+                triggerSearch(searchText);
+            }
+        });
 
         // --- LOGIQUE DU PANIER (CART) ---
         ImageView cartIcon = new ImageView(new Image(getClass().getResource("/images/icons/cart.png").toExternalForm()));
         cartIcon.setFitWidth(28);
         cartIcon.setFitHeight(28);
-        
+
         // Le badge (le petit cercle rouge avec le nombre)
         cartBadge = new Label("0");
-        cartBadge.getStyleClass().add("cart-badge"); 
+        cartBadge.getStyleClass().add("cart-badge");
         cartBadge.setVisible(false); // Caché par défaut si 0
-        
+
         // Positionnement du badge en haut à droite de l'icône
         StackPane cartContainer = new StackPane(cartIcon, cartBadge);
         StackPane.setAlignment(cartBadge, Pos.TOP_RIGHT);
         cartBadge.setTranslateX(8);
         cartBadge.setTranslateY(-8);
         cartContainer.setCursor(javafx.scene.Cursor.HAND);
+        cartContainer.setOnMouseClicked(e -> triggerNav("Cart"));
         // --------------------------------
 
         StackPane avatar = Ui.avatar(user.getName());
         avatar.getStyleClass().add("shell-avatar");
-        
+
         Label name = new Label(user.getName());
         name.getStyleClass().add("shell-user-name");
-        
+
         Label role = new Label(user.getRole().name().replace('_', ' '));
         role.getStyleClass().add("shell-user-role");
-        
+
         VBox identity = new VBox(1, name, role);
         identity.setAlignment(Pos.CENTER_LEFT);
+        identity.setCursor(javafx.scene.Cursor.HAND);
+        avatar.setCursor(javafx.scene.Cursor.HAND);
+
+        HBox profileShortcut = new HBox(10, avatar, identity);
+        profileShortcut.setAlignment(Pos.CENTER_LEFT);
+        profileShortcut.setCursor(javafx.scene.Cursor.HAND);
+        profileShortcut.setOnMouseClicked(e -> triggerNav("Profile"));
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         // On assemble : [Titre] [Spacer] [Search] [Espace] [Cart] [Espace] [Avatar/Identity]
-        HBox header = new HBox(25, title, spacer, search, cartContainer, avatar, identity);
+        HBox header = new HBox(25, title, spacer, search, cartContainer, profileShortcut);
         header.getStyleClass().add("shell-header");
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(0, 20, 0, 0));
-        
+
         return header;
+    }
+
+    private void triggerSearch(String value) {
+        searchText = value == null ? "" : value;
+        if (searchHandler != null) {
+            searchHandler.accept(searchText);
+        }
+    }
+
+    private void triggerNav(String label) {
+        for (javafx.scene.Node node : navBox.getChildren()) {
+            if (node instanceof Button button) {
+                Object buttonLabel = button.getProperties().get("navLabel");
+                if (Objects.equals(buttonLabel, label)) {
+                    button.fire();
+                    return;
+                }
+            }
+        }
     }
 
     private HBox profileBlock() {
         StackPane avatar = Ui.avatar(user.getName());
         // L'avatar doit rester visible, donc on ne l'ajoute PAS à collapsibleNodes
-        
+
         Label name = new Label(user.getName());
         name.getStyleClass().add("shell-profile-name");
-        
+
         Label email = new Label(user.getEmail());
         email.getStyleClass().add("shell-profile-email");
-        
+
         VBox text = new VBox(2, name, email);
-        
+
         // On réutilise ton bouton logoutButton ici
         logoutButton = new Button("Logout");
         logoutButton.getStyleClass().add("shell-logout-button");
@@ -268,7 +306,7 @@ public class AppShell {
         HBox profileContainer = new HBox(12, avatar, text, spacer, logoutButton);
         profileContainer.getStyleClass().add("shell-profile");
         profileContainer.setAlignment(Pos.CENTER_LEFT);
-        
+
         return profileContainer;
     }
 
@@ -284,7 +322,7 @@ public class AppShell {
     }
 
     private void toggleSidebar() {
-    	collapsed = !collapsed;
+        collapsed = !collapsed;
 
         double newWidth = collapsed ? 80 : 310;
         sidebar.setMinWidth(newWidth);
@@ -320,10 +358,10 @@ public class AppShell {
         // 4. Masquer les éléments (Managed false retire l'espace occupé)
         sectionTitle.setVisible(!collapsed);
         sectionTitle.setManaged(!collapsed);
-        
+
         profile.setVisible(!collapsed);
         profile.setManaged(!collapsed);
-        
+
         logoutButton.setVisible(!collapsed);
         logoutButton.setManaged(!collapsed);
 
