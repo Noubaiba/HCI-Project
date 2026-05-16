@@ -248,7 +248,6 @@ public class AdminDashboardView {
             // B. Le Logo et l'Espace Admin : Alignement dynamique selon l'état
             if (topContainer.getChildren().get(1) instanceof VBox logoBlock) {
                 if (collapsed) {
-                    // Quand le menu se ferme, on force tout le bloc du logo à se CENTRER
                     logoBlock.setAlignment(Pos.TOP_CENTER);
                     topContainer.setAlignment(Pos.TOP_CENTER);
                     
@@ -259,7 +258,7 @@ public class AdminDashboardView {
                         }
                     }
                 } else {
-                    // Quand le menu s'ouvre, on remet le logo et le texte à GAUCHE
+
                     logoBlock.setAlignment(Pos.TOP_LEFT);
                     topContainer.setAlignment(Pos.TOP_LEFT);
                     

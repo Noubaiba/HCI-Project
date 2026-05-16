@@ -15,8 +15,6 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-import java.util.List;
-
 public class AuthController {
     private final Stage stage;
     private final AuthService authService;
