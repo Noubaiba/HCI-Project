@@ -1254,41 +1254,7 @@
 .scroll-pane:hover .scroll-bar:vertical {
     -fx-opacity: 1;
 }
-/* Le texte Logout en ROUGE */
-.logout-item-text-red {
-    -fx-text-fill: #ef4444; /* Rouge vif professionnel */
-    -fx-font-weight: bold;
-    -fx-font-size: 13px;
-    -fx-font-family: "Segoe UI";
-}
 
-<<<<<<< Updated upstream
-/* La bulle blanche extérieure (identique à ton image) */
-.modern-logout-menu {
-    -fx-background-color: white;
-    -fx-background-radius: 18;
-    -fx-padding: 6;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 12, 0, 0, 8);
-    -fx-border-color: #f1f5f9;
-    -fx-border-radius: 18;
-}
-
-/* Le bouton interne gris clair (celui qui contient le texte rouge) */
-.modern-logout-menu .menu-item {
-    -fx-background-color: #f1f5f9; /* Gris très clair pour faire ressortir le rouge */
-    -fx-background-radius: 14;
-    -fx-padding: 8 25;
-}
-
-/* Effet au survol : on intensifie un peu le rouge */
-.modern-logout-menu .menu-item:hover {
-    -fx-background-color: #fee2e2; /* Devient rose très pâle au survol */
-}
-
-.modern-logout-menu .menu-item:hover .logout-item-text-red {
-    -fx-text-fill: #dc2626; /* Rouge un peu plus foncé au survol */
-}
-=======
 .sidebar-item {
     -fx-background-color: transparent;
     -fx-text-fill: #111827;
@@ -1326,4 +1292,3 @@
     -fx-background-color: #eef2ff;
 }
 
->>>>>>> Stashed changes
