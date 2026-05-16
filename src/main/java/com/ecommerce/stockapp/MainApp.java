@@ -64,6 +64,8 @@ public class MainApp extends Application {
         stage.setMinHeight(700);
         stage.setScene(scene);
         stage.show();
+        
+        System.out.println("APP STARTED");
     }
 
     public static void main(String[] args) {
