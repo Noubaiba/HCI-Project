@@ -56,6 +56,12 @@ import java.nio.file.Files;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
+import com.ecommerce.stockapp.util.IconFactory;
+import javafx.scene.shape.SVGPath;
+import java.util.Collections;
+import java.util.ArrayList;
+
+import javafx.scene.Node;
 
 public class AdminDashboardView {
     private static final DateTimeFormatter EXPORT_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -63,6 +69,13 @@ public class AdminDashboardView {
     private BorderPane root;
     private VBox navBox;
     private Button activeNavButton;
+    
+    private boolean collapsed = false;
+    private VBox sidebar;
+    private final List<Node> collapsibleNodes = new ArrayList<>();
+   
+    private Label logoText;
+    private Label sectionTitle;
 
     public AdminDashboardView(AdminController controller) {
         this.controller = controller;
@@ -71,108 +84,241 @@ public class AdminDashboardView {
     public Parent render() {
         root = new BorderPane();
         root.getStyleClass().addAll("app-root", "admin-root");
+
         root.setLeft(nav());
         showDashboard();
+
         return root;
     }
 
+    // =========================
+    // SIDEBAR ICON
+    // =========================
+    private VBox hamburgerIcon() {
+        VBox bars = new VBox(4);
+        bars.setAlignment(Pos.CENTER);
 
-    private VBox nav() {
-        // 1. Création du conteneur principal (Sidebar)
-        VBox nav = new VBox(22);
-        nav.getStyleClass().addAll("admin-sidebar", "card");
-        nav.setPadding(new Insets(24));
-        nav.setMinWidth(280);
-        nav.setPrefWidth(280);
+        for (int i = 0; i < 3; i++) {
+            Region bar = new Region();
+            bar.getStyleClass().add("shell-menu-bar");
+            bars.getChildren().add(bar);
+        }
 
-        // --- BLOC LOGO ET NOM (Fixe en haut) ---
-        VBox branding = brandBlock();
-
-        // Liste des boutons de navigation
-        navBox = new VBox(10);
-        navBox.getChildren().addAll(
-                navButton("⌂", "Dashboard", this::showDashboard),
-                navButton("◫", "Products", this::showProducts),
-                navButton("◎", "Users", this::showUsers),
-                navButton("≣", "Orders", this::showOrders),
-                navButton("▣", "Reports", this::showReports),
-                navButton("◌", "System logs", this::showLogs)
-        );
-
-        // Region pour pousser le bouton Logout vers le bas
-        Region spacer = new Region();
-        VBox.setVgrow(spacer, Priority.ALWAYS);
-
-        // Bouton Logout
-        Button logout = Ui.danger("Logout");
-        logout.setMaxWidth(Double.MAX_VALUE);
-        logout.setOnAction(e -> controller.logout());
-
-        // On ajoute tout directement dans la VBox 'nav' sans ScrollPane
-        nav.getChildren().addAll(branding, navBox, spacer, logout);
-
-        return nav;
+        return bars;
     }
 
+    // =========================
+    // NAVIGATION
+    // =========================
+    private VBox nav() {
+        sidebar = new VBox(26);
+        sidebar.getStyleClass().add("admin-sidebar");
+
+        // Mode ouvert par défaut : padding avec 20px à gauche pour le logo et les boutons
+        sidebar.setPadding(new Insets(24, 10, 24, 20));
+        sidebar.setFillWidth(true);
+        sidebar.setAlignment(Pos.TOP_LEFT); 
+
+        sectionTitle = new Label("ADMIN SPACE");
+        sectionTitle.getStyleClass().add("admin-sidebar-eyebrow");
+
+        // ===================== HAMBURGER (TOUJOURS CENTRÉ) =====================
+        Button menuButton = new Button();
+        menuButton.setGraphic(hamburgerIcon());
+        menuButton.getStyleClass().add("hamburger-btn");
+        menuButton.setFocusTraversable(false);
+        menuButton.setOnAction(e -> toggleSidebar());
+
+        HBox menuPill = new HBox(menuButton);
+        menuPill.setId("menuPill");
+        menuPill.setAlignment(Pos.CENTER); // Force le hamburger au centre dès le départ !
+        menuPill.setMaxWidth(Double.MAX_VALUE);
+
+        // ===================== LOGO =====================
+        VBox logoBlock = new VBox(10, brandBlock(), sectionTitle);
+        logoBlock.setId("logoBlock");
+        logoBlock.setAlignment(Pos.TOP_LEFT); // Mode ouvert par défaut : à gauche
+        logoBlock.setMaxWidth(Double.MAX_VALUE);
+
+        // ===================== NAVIGATION =====================
+        navBox = new VBox(10);
+        navBox.setMaxWidth(Double.MAX_VALUE);
+        navBox.getChildren().addAll(
+                navButton(IconFactory.home(), "Dashboard", this::showDashboard),
+                navButton(IconFactory.box(), "Products", this::showProducts),
+                navButton(IconFactory.users(), "Users", this::showUsers),
+                navButton(IconFactory.ordersIcon(), "Orders", this::showOrders),
+                navButton(IconFactory.chart(), "Reports", this::showReports),
+                navButton(IconFactory.log(), "Logs", this::showLogs)
+        );
+
+        // Conteneur supérieur (Hamburger + Logo)
+        VBox top = new VBox(12, menuPill, logoBlock);
+        top.setId("topContainer");
+        top.setAlignment(Pos.TOP_LEFT);
+
+        sidebar.getChildren().addAll(top, navBox);
+
+        return sidebar;
+    }
+    // =========================
+    // BRAND BLOCK
+    // =========================
+   
     private VBox brandBlock() {
-        // Image du Logo
         ImageView logoImage = new ImageView();
         try {
-            logoImage.setImage(new Image(getClass().getResource("/images/Stockify.png").toExternalForm()));
-        } catch (Exception e) {
-            // Fallback si l'image est manquante
-        }
+            logoImage.setImage(new Image(
+                    getClass().getResource("/images/Stockify.png").toExternalForm()
+            ));
+        } catch (Exception ignored) {}
+
         logoImage.setFitWidth(45);
         logoImage.setFitHeight(45);
         logoImage.setPreserveRatio(true);
 
-        // Nom du site
-        Label siteName = new Label("Stockify");
-        siteName.setStyle("-fx-font-size: 22px; -fx-font-weight: 900; -fx-text-fill: #111827;");
+        logoText = new Label("Stockify");
+        logoText.setStyle("-fx-font-size: 22px; -fx-font-weight: 900; -fx-text-fill: #111827;");
 
-        HBox logoRow = new HBox(12, logoImage, siteName);
-        logoRow.setAlignment(Pos.CENTER_LEFT);
-        logoRow.setPadding(new Insets(0, 0, 10, 0));
+        if (!collapsibleNodes.contains(logoText)) {
+            collapsibleNodes.add(logoText);
+        }
 
-        // Ligne de séparation ou sous-titre
-        Label eyebrow = new Label("ADMIN SPACE");
-        eyebrow.getStyleClass().add("admin-sidebar-eyebrow");
+        // On crée la ligne du logo. Son alignement sera géré dynamiquement dans toggleSidebar.
+        HBox logoRow = new HBox(12, logoImage, logoText);
+        logoRow.setId("logoRow"); // On lui donne un ID pour la retrouver facilement
+        logoRow.setAlignment(Pos.CENTER_LEFT); // Par défaut ouvert : à gauche
 
-        VBox brand = new VBox(8, logoRow, eyebrow);
+        VBox brand = new VBox(8, logoRow);
+        brand.setId("brandBlock"); // ID pour identification
+        brand.setAlignment(Pos.CENTER_LEFT); // Par défaut ouvert : à gauche
         brand.setPadding(new Insets(0, 0, 15, 0));
+
         return brand;
     }
+    // =========================
+    // COLLAPSE SIDEBAR
+    // =========================
+    private void toggleSidebar() {
+        collapsed = !collapsed;
 
+        double w = collapsed ? 80 : 280;
 
+        sidebar.setPrefWidth(w);
+        sidebar.setMinWidth(w);
+        sidebar.setMaxWidth(w);
+        
+        // 1. Gestion du Padding global de la sidebar
+        if (collapsed) {
+            sidebar.setPadding(new Insets(24, 0, 24, 0)); // Pas de décalage à gauche quand c'est fermé
+            sidebar.setAlignment(Pos.TOP_CENTER);
+        } else {
+            sidebar.setPadding(new Insets(24, 10, 24, 20)); // Marge propre à gauche quand c'est ouvert
+            sidebar.setAlignment(Pos.TOP_LEFT);
+        }
 
-    private Button navButton(String iconText, String text, Runnable action) {
-        Label icon = new Label(iconText);
-        icon.getStyleClass().add("admin-sidebar-nav-icon");
-        Label label = new Label(text);
-        label.getStyleClass().add("admin-sidebar-nav-label");
-        HBox content = new HBox(12, icon, label);
+        // Visibilité des textes
+        sectionTitle.setVisible(!collapsed);
+        sectionTitle.setManaged(!collapsed);
+        logoText.setVisible(!collapsed);
+        logoText.setManaged(!collapsed);
+
+        for (Node n : collapsibleNodes) {
+            n.setVisible(!collapsed);
+            n.setManaged(!collapsed);
+        }
+
+        // Alignement des boutons de navigation (Centre si fermé, Gauche si ouvert)
+        navBox.getChildren().forEach(node -> {
+            if (node instanceof Button btn) {
+                if (btn.getGraphic() instanceof HBox hbox) {
+                    hbox.setAlignment(collapsed ? Pos.CENTER : Pos.CENTER_LEFT);
+                }
+            }
+        });
+
+        // 2. 🔥 TRAITEMENT SPÉCIFIQUE ET TRÈS STRICT POUR LE HAMBURGER ET LE LOGO
+        if (sidebar.getChildren().get(0) instanceof VBox topContainer) {
+            
+            // A. Le Hamburger : Il reste TOUJOURS centré au milieu de la largeur disponible
+            if (topContainer.getChildren().get(0) instanceof HBox menuPill) {
+                menuPill.setAlignment(Pos.CENTER); 
+            }
+            
+            // B. Le Logo et l'Espace Admin : Alignement dynamique selon l'état
+            if (topContainer.getChildren().get(1) instanceof VBox logoBlock) {
+                if (collapsed) {
+                    // Quand le menu se ferme, on force tout le bloc du logo à se CENTRER
+                    logoBlock.setAlignment(Pos.TOP_CENTER);
+                    topContainer.setAlignment(Pos.TOP_CENTER);
+                    
+                    if (logoBlock.getChildren().get(0) instanceof VBox brandBlock) {
+                        brandBlock.setAlignment(Pos.CENTER);
+                        if (brandBlock.getChildren().get(0) instanceof HBox logoRow) {
+                            logoRow.setAlignment(Pos.CENTER); // L'icône seule se centre parfaitement
+                        }
+                    }
+                } else {
+                    // Quand le menu s'ouvre, on remet le logo et le texte à GAUCHE
+                    logoBlock.setAlignment(Pos.TOP_LEFT);
+                    topContainer.setAlignment(Pos.TOP_LEFT);
+                    
+                    if (logoBlock.getChildren().get(0) instanceof VBox brandBlock) {
+                        brandBlock.setAlignment(Pos.CENTER_LEFT);
+                        if (brandBlock.getChildren().get(0) instanceof HBox logoRow) {
+                            logoRow.setAlignment(Pos.CENTER_LEFT); // Repositionne à gauche
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // =========================
+    // NAV BUTTON FIX
+    // =========================
+    private Button navButton(Node icon, String label, Runnable action) {
+
+        Label text = new Label(label);
+        text.getStyleClass().add("admin-sidebar-nav-label");
+
+        collapsibleNodes.add(text);
+
+        HBox content = new HBox(12, icon, text);
         content.setAlignment(Pos.CENTER_LEFT);
 
-        Button button = new Button();
-        button.setGraphic(content);
-        button.getStyleClass().add("admin-nav-button");
-        button.setMaxWidth(Double.MAX_VALUE);
-        button.getProperties().put("navText", text);
-        button.setOnAction(e -> {
-            setActiveNav(button);
+        Button btn = new Button();
+        btn.setGraphic(content);
+
+        btn.getStyleClass().add("sidebar-item");
+        btn.setMaxWidth(Double.MAX_VALUE);
+
+        // 🔥 FIX: needed for selectNav()
+        btn.getProperties().put("navText", label);
+
+        btn.setOnAction(e -> {
+            if (activeNavButton != null) {
+                activeNavButton.getStyleClass().remove("active");
+            }
+
+            activeNavButton = btn;
+            btn.getStyleClass().add("active");
+
             action.run();
         });
-        if (activeNavButton == null) {
-            setActiveNav(button);
-        }
-        return button;
+
+        return btn;
     }
+
+    
 
     private void setActiveNav(Button button) {
         if (activeNavButton != null) {
             activeNavButton.getStyleClass().remove("active");
         }
+
         activeNavButton = button;
+
         if (!button.getStyleClass().contains("active")) {
             button.getStyleClass().add("active");
         }
@@ -1632,15 +1778,18 @@ public class AdminDashboardView {
     }
 
     private void selectNav(String text) {
-        if (navBox == null) {
-            return;
-        }
-        for (javafx.scene.Node node : navBox.getChildren()) {
-            if (node instanceof Button button && text.equals(button.getProperties().get("navText"))) {
-                setActiveNav(button);
-                return;
-            }
-        }
+
+        if (navBox == null || text == null) return;
+
+        navBox.getChildren().stream()
+                .filter(n -> n instanceof Button)
+                .map(n -> (Button) n)
+                .filter(btn -> {
+                    Object v = btn.getProperties().get("navText");
+                    return v instanceof String && text.equals(v);
+                })
+                .findFirst()
+                .ifPresent(this::setActiveNav);
     }
 
     private <T> TableColumn<T, String> col(String title, java.util.function.Function<T, String> mapper) {

@@ -1599,7 +1599,7 @@
 
 /* Forcer le contenu à ne pas être coupé */
 .admin-dialog-card {
-    -fx-min-height: -壓-min-content;
+    -fx-min-height: -min-content;
 }
 
 .admin-dialog-chrome {
@@ -1829,4 +1829,41 @@
 
 .admin-page-hero.admin-log-hero .admin-chip-label {
     -fx-text-fill: #ffffff;
+}
+
+.sidebar-item {
+    -fx-background-color: transparent;
+    -fx-text-fill: #111827;
+    -fx-padding: 12 14;
+    -fx-background-radius: 12;
+    -fx-cursor: hand;
+    -fx-alignment: CENTER_LEFT;
+}
+
+/* hover léger */
+.sidebar-item:hover {
+    -fx-background-color: #eef2ff;
+}
+
+/* active item (comme ton 1er screenshot) */
+.sidebar-item.active {
+    -fx-background-color: #e0e7ff;
+    -fx-border-color: #6366f1;
+    -fx-border-width: 0 0 0 4;
+    -fx-border-radius: 8;
+}
+.sidebar-item .label {
+    -fx-font-size: 14px;
+    -fx-font-weight: 600;
+}
+
+.hamburger-btn {
+    -fx-background-color: transparent;
+
+    -fx-cursor: hand;
+    -fx-background-radius: 10;
+}
+
+.hamburger-btn:hover {
+    -fx-background-color: #eef2ff;
 }

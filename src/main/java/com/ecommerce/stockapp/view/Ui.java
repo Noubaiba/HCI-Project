@@ -132,4 +132,8 @@ public final class Ui {
         }
         return (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1)).toUpperCase();
     }
+    
+    public static VBox card(String text) {
+        return card(new Label(text));
+    }
 }
