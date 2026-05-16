@@ -50,8 +50,7 @@ public class MainApp extends Application {
         );
 
         // 4. Démarrage du service de liens d'activation (écouteur de protocole)
-        new ActivationLinkService(authController).start();
-
+        new ActivationLinkService(authService, authController::logout).start();
         // 5. Configuration de la vue initiale (Login/Auth)
         AuthView view = new AuthView(authController);
         Scene scene = new Scene(view.render(), 1180, 760);

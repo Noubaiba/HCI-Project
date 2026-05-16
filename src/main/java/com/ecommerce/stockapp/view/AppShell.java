@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import com.ecommerce.stockapp.util.IconFactory;
-import com.ecommerce.stockapp.view.NavItem;
 import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
@@ -28,7 +27,6 @@ import javafx.geometry.Side;
 import javafx.scene.control.CustomMenuItem;
 
 public class AppShell {
-	public record NavItem(Node icon, String label, Runnable action) {}
 
     private final User user;
     private final List<NavItem> navItems;
@@ -155,13 +153,13 @@ public class AppShell {
 
     private Button navButton(NavItem item) {
 
-        Label label = new Label(item.label());
+        Label label = new Label(item.getLabel());
         label.getStyleClass().add("shell-nav-label");
 
         collapsibleNodes.add(label); // 👈 important
 
-//        HBox content = new HBox(50, item.icon(), label);
-        HBox content = new HBox(10, item.icon(), label);
+//        HBox content = new HBox(50, item.getIcon(), label);
+        HBox content = new HBox(10, item.getIcon(), label);
         content.setAlignment(Pos.CENTER_LEFT);
         content.setMaxWidth(Double.MAX_VALUE);
 
@@ -173,7 +171,7 @@ public class AppShell {
 
         button.getStyleClass().add("shell-nav-button");
 
-        button.getProperties().put("navLabel", item.label());
+        button.getProperties().put("navLabel", item.getLabel());
         button.setMaxWidth(Double.MAX_VALUE);
 
         button.setOnAction(e -> {
@@ -184,7 +182,7 @@ public class AppShell {
             activeButton = button;
             button.getStyleClass().add("active");
 
-            item.action().run();
+            item.getAction().run();
         });
 
         return button;

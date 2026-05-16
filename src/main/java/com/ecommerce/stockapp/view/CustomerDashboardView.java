@@ -1911,12 +1911,12 @@ public class CustomerDashboardView {
         try { a.run(); } catch (Exception e) { Ui.error(e); }
     }
 
-    public List<AppShell.NavItem> navItems() {
+    public List<NavItem> navItems() {
         return List.of(
-            new AppShell.NavItem(IconFactory.catalogIcon(), "Catalog", this::showCatalog),
-            new AppShell.NavItem(IconFactory.cartIcon(), "Cart", this::showCart),
-            new AppShell.NavItem(IconFactory.ordersIcon(), "Orders", this::showOrders),
-            new AppShell.NavItem(IconFactory.profileIcon(), "Profile", this::showProfile)
+            new NavItem(IconFactory.catalogIcon(), "Catalog", this::showCatalog),
+            new NavItem(IconFactory.cartIcon(), "Cart", this::showCart),
+            new NavItem(IconFactory.ordersIcon(), "Orders", this::showOrders),
+            new NavItem(IconFactory.profileIcon(), "Profile", this::showProfile)
         );
     }
 }

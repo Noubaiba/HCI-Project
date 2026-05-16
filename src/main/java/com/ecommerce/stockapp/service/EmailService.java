@@ -13,7 +13,7 @@ public class EmailService {
             throw new MessagingException("SMTP is not configured. Set SMTP_USER, SMTP_PASSWORD and SMTP_FROM.");
         }
 
-        String link = SmtpConfig.activationBaseUrl() + "?token=" + token;
+        String link = SmtpConfig.activationBaseUrl() + "/activate?token=" + token;
         String body = """
                 Hello %s,
 

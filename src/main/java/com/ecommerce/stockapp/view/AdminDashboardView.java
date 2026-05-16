@@ -33,16 +33,10 @@ import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -248,7 +242,6 @@ public class AdminDashboardView {
             // B. Le Logo et l'Espace Admin : Alignement dynamique selon l'état
             if (topContainer.getChildren().get(1) instanceof VBox logoBlock) {
                 if (collapsed) {
-                    // Quand le menu se ferme, on force tout le bloc du logo à se CENTRER
                     logoBlock.setAlignment(Pos.TOP_CENTER);
                     topContainer.setAlignment(Pos.TOP_CENTER);
                     
@@ -259,7 +252,7 @@ public class AdminDashboardView {
                         }
                     }
                 } else {
-                    // Quand le menu s'ouvre, on remet le logo et le texte à GAUCHE
+
                     logoBlock.setAlignment(Pos.TOP_LEFT);
                     topContainer.setAlignment(Pos.TOP_LEFT);
                     
@@ -324,49 +317,199 @@ public class AdminDashboardView {
         }
     }
 
+    private VBox dashCategoryCard(String name, int productCount, int totalStock, int lowStock, String accent) {
+        Label iconLabel = new Label(name.substring(0, 1).toUpperCase());
+        iconLabel.getStyleClass().addAll("dash-cat-icon", accent);
+
+        Label nameLabel = new Label(name);
+        nameLabel.getStyleClass().add("dash-cat-name");
+        nameLabel.setWrapText(true);
+
+        Label productsLabel = new Label(productCount + " products");
+        productsLabel.getStyleClass().add("dash-cat-sub");
+
+        Label stockLabel = new Label(String.valueOf(totalStock));
+        stockLabel.getStyleClass().add("dash-cat-stock");
+
+        Label stockHint = new Label("units in stock");
+        stockHint.getStyleClass().add("dash-cat-sub");
+
+        VBox stockBlock = new VBox(2, stockLabel, stockHint);
+
+        Label alertLabel = new Label(lowStock > 0 ? lowStock + " low stock" : "All good ✓");
+        alertLabel.getStyleClass().addAll("dash-stock-badge", lowStock > 0 ? "dash-badge-low" : "dash-badge-ok");
+
+        HBox top = new HBox(10, iconLabel, new VBox(2, nameLabel, productsLabel));
+        top.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(top.getChildren().get(1), Priority.ALWAYS);
+
+        Region divider = new Region();
+        divider.getStyleClass().add("admin-dialog-divider");
+        divider.setPrefHeight(1);
+
+        VBox card = new VBox(12, top, divider, stockBlock, alertLabel);
+        card.getStyleClass().add("dash-cat-card");
+        return card;
+    }
+
     private void showDashboard() {
         DashboardStats stats = safe(controller::stats);
-        if (stats == null) {
-            return;
+        if (stats == null) return;
+
+        // ── KPI Cards ────────────────────────────────────────────
+        VBox cardProducts = dashKpiCard("📦", "Total Products",   String.valueOf(stats.getProducts()), null,     "blue");
+        VBox cardStock    = dashKpiCard("🛍",  "Total Stock",     String.valueOf(stats.getProducts() * 10), "+12%", "blue");
+        VBox cardLow      = dashKpiCard("⚠",  "Low Stock Alerts", String.valueOf(stats.getLowStock()), null,    "orange");
+        VBox cardRevenue  = dashKpiCard("📊", "Revenue",          "$" + stats.getRevenue(),            "+8.5%", "blue");
+
+        HBox kpiRow = new HBox(16, cardProducts, cardStock, cardLow, cardRevenue);
+        kpiRow.getChildren().forEach(n -> HBox.setHgrow(n, Priority.ALWAYS));
+
+        // ── Charts ───────────────────────────────────────────────
+        VBox barCard = chartCard("Users by role", usersByRoleChart());
+        VBox pieCard = chartCard("Products by category", categoryChart());
+
+        HBox chartsRow = new HBox(16, barCard, pieCard);
+        HBox.setHgrow(barCard, Priority.ALWAYS);
+        HBox.setHgrow(pieCard, Priority.ALWAYS);
+
+        // ── Category Cards ───────────────────────────────────────
+        List<Product> products = controller.products("");
+
+        java.util.Map<String, List<Product>> byCategory = products.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        p -> p.getCategoryName() == null ? "Uncategorized" : p.getCategoryName()
+                ));
+
+        FlowPane categoryRow = new FlowPane(16, 16);
+        for (java.util.Map.Entry<String, List<Product>> entry : byCategory.entrySet()) {
+            String catName      = entry.getKey();
+            List<Product> catProducts = entry.getValue();
+            int totalStock      = catProducts.stream().mapToInt(Product::getQuantity).sum();
+            int lowStock        = (int) catProducts.stream().filter(p -> p.getQuantity() < 10).count();
+            String accent       = lowStock > 0 ? "orange" : "blue";
+            VBox card           = dashCategoryCard(catName, catProducts.size(), totalStock, lowStock, accent);
+            card.setPrefWidth(200);
+            categoryRow.getChildren().add(card);
         }
 
-        HBox hero = new HBox(18, heroPanel(stats), quickActionsCard());
-        HBox.setHgrow(hero.getChildren().get(0), Priority.ALWAYS);
-        HBox.setHgrow(hero.getChildren().get(1), Priority.ALWAYS);
+        VBox body = new VBox(20, kpiRow, chartsRow,
+                surfaceCard(sectionTitle("Stock by Category", "Overview per category.", "📦"), categoryRow));
+        body.getStyleClass().add("dash-body");
 
-        GridPane statGrid = new GridPane();
-        statGrid.setHgap(16);
-        statGrid.setVgap(16);
-        statGrid.add(metricCard("Products", String.valueOf(stats.getProducts()), "Catalogue actif"), 0, 0);
-        statGrid.add(metricCard("Users", String.valueOf(stats.getUsers()), "Comptes plateforme"), 1, 0);
-        statGrid.add(metricCard("Orders", String.valueOf(stats.getOrders()), "Commandes totales"), 2, 0);
-        statGrid.add(metricCard("Revenue", "$" + stats.getRevenue(), "Chiffre d'affaires"), 3, 0);
+        setContent("Dashboard", body);
+    }
 
-        GridPane chartGrid = new GridPane();
-        chartGrid.setHgap(16);
-        chartGrid.setVgap(16);
-        VBox categoryChart = chartCard("Products by category", categoryChart());
-        VBox usersChart = chartCard("Users by role", usersByRoleChart());
-        chartGrid.add(categoryChart, 0, 0);
-        chartGrid.add(usersChart, 1, 0);
-        GridPane.setHgrow(categoryChart, Priority.ALWAYS);
-        GridPane.setHgrow(usersChart, Priority.ALWAYS);
+    private VBox dashKpiCard(String icon, String label, String value, String trend, String accent) {
+        Label iconLabel = new Label(icon);
+        iconLabel.getStyleClass().addAll("dash-kpi-icon", accent);
 
-        VBox insightPanel = surfaceCard(
-                sectionTitle("Operational health", "A quick pulse of inventory, orders and catalogue balance."),
-                progressLine("Low stock pressure", stats.getLowStock(), Math.max(1, stats.getProducts())),
-                progressLine("Order activity", stats.getOrders(), Math.max(1, stats.getUsers() * 3)),
-                progressLine("Catalog coverage", stats.getProducts(), Math.max(1, stats.getProducts() + stats.getLowStock()))
-        );
+        Label trendLabel = new Label(trend == null ? "" : "↗ " + trend);
+        trendLabel.getStyleClass().add("dash-kpi-trend");
+        trendLabel.setVisible(trend != null);
 
-        VBox body = new VBox(18,
-                chartGrid,
-                hero,
-                statGrid,
-                insightPanel
-        );
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        setContent("Analytics overview", body);
+        HBox top = new HBox(8, iconLabel, spacer, trendLabel);
+        top.setAlignment(Pos.CENTER_LEFT);
+
+        Label labelNode = new Label(label);
+        labelNode.getStyleClass().add("dash-kpi-label");
+
+        Label valueNode = new Label(value);
+        valueNode.getStyleClass().add("dash-kpi-value");
+
+        VBox card = new VBox(10, top, labelNode, valueNode);
+        card.getStyleClass().addAll("dash-kpi-card");
+        return card;
+    }
+
+    private VBox dashProductCard(Product p) {
+        // Image
+        ImageView img = new ImageView();
+        try {
+            String url = resolveImage(p.getImageUrl());
+            if (!url.isBlank()) img.setImage(new Image(url, true));
+        } catch (Exception ignored) {}
+        img.setFitWidth(54);
+        img.setFitHeight(54);
+        img.setPreserveRatio(true);
+
+        // Stock badge
+        String badgeText;
+        String badgeClass;
+        if (p.getQuantity() == 0) {
+            badgeText = "Out of Stock"; badgeClass = "dash-badge-out";
+        } else if (p.getQuantity() < 10) {
+            badgeText = "Low Stock";    badgeClass = "dash-badge-low";
+        } else {
+            badgeText = "In Stock";     badgeClass = "dash-badge-ok";
+        }
+        Label badge = new Label(badgeText);
+        badge.getStyleClass().addAll("dash-stock-badge", badgeClass);
+
+        Label name = new Label(p.getName());
+        name.getStyleClass().add("dash-product-name");
+        name.setWrapText(true);
+
+        Label category = new Label(p.getCategoryName() == null ? "—" : p.getCategoryName());
+        category.getStyleClass().add("dash-product-category");
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox nameRow = new HBox(8, name, spacer, badge);
+        nameRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Stats row
+        VBox stockCol  = dashStatCol("Stock",  String.valueOf(p.getQuantity()));
+        VBox priceCol  = dashStatCol("Price",  "$" + p.getPrice());
+        VBox soldCol   = dashStatCol("Sold",   "—");
+        HBox statsRow  = new HBox(24, stockCol, priceCol, soldCol);
+
+        // Progress bar
+        double ratio = Math.min(1.0, p.getQuantity() / 300.0);
+        HBox track = new HBox();
+        track.getStyleClass().add("dash-progress-track");
+        Region fill = new Region();
+        fill.getStyleClass().addAll("dash-progress-fill",
+                p.getQuantity() == 0 ? "out" : p.getQuantity() < 10 ? "low" : "ok");
+        fill.prefWidthProperty().bind(track.widthProperty().multiply(ratio));
+        track.getChildren().add(fill);
+
+        HBox top = new HBox(14, img, new VBox(4, nameRow, category));
+        HBox.setHgrow(top.getChildren().get(1), Priority.ALWAYS);
+        top.setAlignment(Pos.CENTER_LEFT);
+
+        VBox card = new VBox(12, top, statsRow, track);
+        card.getStyleClass().add("dash-product-card");
+        return card;
+    }
+
+    private VBox dashStatCol(String label, String value) {
+        Label l = new Label(label);
+        l.getStyleClass().add("dash-stat-label");
+        Label v = new Label(value);
+        v.getStyleClass().add("dash-stat-value");
+        return new VBox(2, l, v);
+    }
+
+    private BarChart<String, Number> monthlySalesChart() {
+        CategoryAxis x = new CategoryAxis();
+        NumberAxis y = new NumberAxis();
+        BarChart<String, Number> chart = new BarChart<>(x, y);
+        chart.setLegendVisible(false);
+        chart.setAnimated(false);
+        chart.setTitle(null);
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        String[] months = {"Jan", "Feb", "Mar", "Apr", "May", "Jun"};
+        int[] values = {4100, 3800, 5000, 4500, 6100, 5800};
+        for (int i = 0; i < months.length; i++)
+            series.getData().add(new XYChart.Data<>(months[i], values[i]));
+        chart.getData().add(series);
+        chart.getStyleClass().add("dash-bar-chart");
+        return chart;
     }
 
     private VBox heroPanel(DashboardStats stats) {
@@ -983,65 +1126,94 @@ public class AdminDashboardView {
 
     private void showReports() {
         DashboardStats stats = safe(controller::stats);
+
         HBox kpiRow = new HBox(16);
+        kpiRow.getStyleClass().add("admin-report-kpi-row");
 
         if (stats != null) {
-            // Calcul sécurisé du panier moyen avec BigDecimal (Résout l'erreur de division)
             BigDecimal revenue = stats.getRevenue() != null ? stats.getRevenue() : BigDecimal.ZERO;
-            BigDecimal average = revenue.divide(BigDecimal.valueOf(Math.max(1, stats.getOrders())), 2, java.math.RoundingMode.HALF_UP);
+            BigDecimal average = revenue.divide(
+                    BigDecimal.valueOf(Math.max(1, stats.getOrders())), 2, java.math.RoundingMode.HALF_UP);
 
             kpiRow.getChildren().addAll(
-                    miniStateCard("Taux de Conversion", "3.2%", "↑ 1.2% ce mois"),
-                    miniStateCard("Panier Moyen", "$" + average, "Stable"),
-                    miniStateCard("Ruptures de Stock", String.valueOf(stats.getLowStock()), "Action requise")
+                    reportKpiCard("Total Revenue",    "$" + revenue,                        "All-time earnings",       "R", "revenue"),
+                    reportKpiCard("Average Order",    "$" + average,                        "Revenue per order",       "A", "average"),
+                    reportKpiCard("Conversion Rate",  "3.2%",                               "↑ 1.2% this month",      "C", "conversion"),
+                    reportKpiCard("Low Stock Alerts", String.valueOf(stats.getLowStock()),  "Items requiring restock", "L", "alert")
             );
             kpiRow.getChildren().forEach(node -> HBox.setHgrow(node, Priority.ALWAYS));
         }
 
-
-        // Zone de texte stylisée
-        TextArea reportArea = new TextArea(controller.report());
-        reportArea.setEditable(false);
-        reportArea.setWrapText(true);
-        reportArea.getStyleClass().add("admin-report-display");
+        VBox reportArea = buildReportDisplay(controller.report());
         VBox.setVgrow(reportArea, Priority.ALWAYS);
 
-        Button refresh = Ui.secondary("Rafraîchir");
-        refresh.setOnAction(e -> reportArea.setText(controller.report()));
+        Button refresh = Ui.secondary("Refresh");
+        refresh.getStyleClass().add("admin-report-refresh-btn");
 
-        // Construction de la page avec un ScrollPane invisible
-        VBox contentBody = new VBox(20,
-                kpiRow,
-                surfaceCard(
-                        sectionTitle("Détails du rapport", "Données consolidées en temps réel"),
-                        Ui.toolbar(refresh),
-                        reportArea
-                )
+        Button exportBtn = Ui.secondary("Export CSV");
+        exportBtn.getStyleClass().add("admin-report-export-btn");
+        exportBtn.setOnAction(e -> exportCsv("report-export.csv", "report\n" + controller.report()));
+
+        VBox reportSection = surfaceCard(
+                sectionTitle("Report Details", "Consolidated data refreshed in real time.", "📋"),
+                Ui.toolbar(refresh, exportBtn),
+                reportArea
         );
+        reportSection.getStyleClass().add("admin-report-toolbar");
+        VBox.setVgrow(reportSection, Priority.ALWAYS);
 
-        ScrollPane pageScroll = new ScrollPane(contentBody);
-        pageScroll.getStyleClass().add("admin-page-scroll"); // Utilise le scroll sans barres
-        pageScroll.setFitToWidth(true);
+        refresh.setOnAction(e -> {
+            reportSection.getChildren().remove(reportSection.getChildren().size() - 1);
+            VBox newReport = buildReportDisplay(controller.report());
+            VBox.setVgrow(newReport, Priority.ALWAYS);
+            reportSection.getChildren().add(newReport);
+        });
 
-        setContent("Rapports", pageScroll);
+        VBox contentBody = new VBox(16, kpiRow, reportSection);
+        VBox.setVgrow(reportSection, Priority.ALWAYS);
+
+        setContent("Reports", contentBody);
     }
-    private VBox miniStateCard(String label, String value, String trend) {
-        Label lblLabel = new Label(label.toUpperCase());
-        lblLabel.getStyleClass().add("admin-dialog-overline");
 
-        Label lblValue = new Label(value);
-        lblValue.getStyleClass().add("stat-number-small");
-        lblValue.setStyle("-fx-font-size: 22px; -fx-font-weight: 800; -fx-text-fill: #111827;");
+    private VBox reportKpiCard(String label, String value, String detail, String iconText, String accentClass) {
+        Label icon = new Label(iconText);
+        icon.getStyleClass().addAll("admin-report-kpi-icon", accentClass);
 
-        Label lblTrend = new Label(trend);
-        lblTrend.setStyle("-fx-text-fill: #10b981; -fx-font-size: 11px; -fx-font-weight: bold;");
+        Label overline = new Label(label.toUpperCase());
+        overline.getStyleClass().add("admin-card-overline");
 
-        VBox card = new VBox(6, lblLabel, lblValue, lblTrend);
-        card.getStyleClass().add("admin-surface-card");
-        card.setPadding(new Insets(15));
-        card.setMinWidth(180);
+        Label valueNode = new Label(value);
+        valueNode.getStyleClass().addAll("admin-report-kpi-value", accentClass);
+
+        Label detailNode = new Label(detail);
+        detailNode.getStyleClass().add("subtitle");
+        detailNode.setWrapText(true);
+
+        HBox top = new HBox(10, icon, overline);
+        top.setAlignment(Pos.CENTER_LEFT);
+
+        VBox card = new VBox(10, top, valueNode, detailNode);
+        card.getStyleClass().addAll("admin-report-kpi-card", accentClass);
+        HBox.setHgrow(card, Priority.ALWAYS);
         return card;
     }
+//    private VBox miniStateCard(String label, String value, String trend) {
+//        Label lblLabel = new Label(label.toUpperCase());
+//        lblLabel.getStyleClass().add("admin-dialog-overline");
+//
+//        Label lblValue = new Label(value);
+//        lblValue.getStyleClass().add("stat-number-small");
+//        lblValue.setStyle("-fx-font-size: 22px; -fx-font-weight: 800; -fx-text-fill: #111827;");
+//
+//        Label lblTrend = new Label(trend);
+//        lblTrend.setStyle("-fx-text-fill: #10b981; -fx-font-size: 11px; -fx-font-weight: bold;");
+//
+//        VBox card = new VBox(6, lblLabel, lblValue, lblTrend);
+//        card.getStyleClass().add("admin-surface-card");
+//        card.setPadding(new Insets(15));
+//        card.setMinWidth(180);
+//        return card;
+//    }
 
     private void showLogs() {
         var logs = FXCollections.observableArrayList(controller.logs());
@@ -1827,4 +1999,170 @@ public class AdminDashboardView {
     private BigDecimal parseMoney(String value) {
         return new BigDecimal(value);
     }
+
+    private VBox buildReportDisplay(String rawReport) {
+        VBox container = new VBox(16);
+        container.getStyleClass().add("admin-report-body");
+
+        if (rawReport == null || rawReport.isBlank()) {
+            Label empty = new Label("No report data available.");
+            empty.getStyleClass().add("subtitle");
+            container.getChildren().add(empty);
+            return container;
+        }
+
+        String[] lines = rawReport.split("\n");
+
+        // ── Summary table ─────────────────────────────────────────
+        List<String[]> summaryRows = new ArrayList<>();
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.isBlank() || trimmed.startsWith("Generated") || trimmed.contains("|")) continue;
+            if (trimmed.equals(trimmed.toUpperCase())) continue;
+            if (trimmed.contains(":")) {
+                String[] parts = trimmed.split(":", 2);
+                if (parts.length == 2 && !parts[1].isBlank())
+                    summaryRows.add(new String[]{parts[0].trim(), parts[1].trim()});
+            }
+        }
+
+        if (!summaryRows.isEmpty()) {
+            TableView<String[]> summaryTable = new TableView<>();
+            decorateTable(summaryTable, 48);
+            summaryTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
+
+            TableColumn<String[], String> keyCol = new TableColumn<>("Metric");
+            keyCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[0]));
+            keyCol.setCellFactory(c -> new TableCell<>() {
+                @Override protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) { setGraphic(null); return; }
+                    Label l = new Label(item);
+                    l.getStyleClass().add("admin-report-kv-key");
+                    setGraphic(l);
+                }
+            });
+
+            TableColumn<String[], String> valCol = new TableColumn<>("Value");
+            valCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[1]));
+            valCol.setCellFactory(c -> new TableCell<>() {
+                @Override protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) { setGraphic(null); return; }
+                    Label l = new Label(item);
+                    l.getStyleClass().add("admin-report-kv-value");
+                    setGraphic(l);
+                }
+            });
+
+            summaryTable.getColumns().addAll(keyCol, valCol);
+            summaryTable.setItems(FXCollections.observableArrayList(summaryRows));
+
+            double summaryHeight = summaryRows.size() * 48.0 + 58;
+            summaryTable.setPrefHeight(summaryHeight);
+            summaryTable.setMinHeight(summaryHeight);
+            summaryTable.setMaxHeight(summaryHeight);
+
+            Label summaryHeader = new Label("SUMMARY");
+            summaryHeader.getStyleClass().add("admin-report-group-header");
+            container.getChildren().addAll(summaryHeader, summaryTable);
+        }
+
+        // ── Inventory table ───────────────────────────────────────
+        List<String[]> inventoryRows = new ArrayList<>();
+        boolean inInventory = false;
+
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.equalsIgnoreCase("INVENTORY")) { inInventory = true; continue; }
+            if (!inInventory || !trimmed.contains("|")) continue;
+
+            String[] parts = trimmed.split("\\|");
+            String name     = parts.length > 0 ? parts[0].trim() : "";
+            String category = parts.length > 1 ? parts[1].trim() : "";
+            String qty      = "";
+            String price    = "";
+
+            for (int i = 2; i < parts.length; i++) {
+                String p = parts[i].trim();
+                if (p.toLowerCase().startsWith("qty"))   qty   = p;
+                if (p.toLowerCase().startsWith("price")) price = p;
+            }
+
+            if (!name.isBlank())
+                inventoryRows.add(new String[]{name, category, qty, price});
+        }
+
+        if (!inventoryRows.isEmpty()) {
+            TableView<String[]> inventoryTable = new TableView<>();
+            decorateTable(inventoryTable, 52);
+            inventoryTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
+
+            TableColumn<String[], String> nameCol = new TableColumn<>("Product");
+            nameCol.setPrefWidth(400);
+            nameCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[0]));
+            nameCol.setCellFactory(c -> new TableCell<>() {
+                @Override protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) { setGraphic(null); return; }
+                    Label l = new Label(item);
+                    l.getStyleClass().add("admin-report-inventory-name");
+                    l.setWrapText(true);
+                    setGraphic(l);
+                }
+            });
+
+            TableColumn<String[], String> catCol = new TableColumn<>("Category");
+            catCol.setPrefWidth(160);
+            catCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[1]));
+            catCol.setCellFactory(c -> new TableCell<>() {
+                @Override protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) { setGraphic(null); return; }
+                    Label l = new Label(item);
+                    l.getStyleClass().add("admin-report-inventory-chip");
+                    setGraphic(l);
+                }
+            });
+
+            TableColumn<String[], String> qtyCol = new TableColumn<>("Quantity");
+            qtyCol.setPrefWidth(100);
+            qtyCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[2]));
+            qtyCol.setCellFactory(c -> new TableCell<>() {
+                @Override protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) { setGraphic(null); return; }
+                    Label l = new Label(item);
+                    l.getStyleClass().add("admin-report-kv-value");
+                    setGraphic(l);
+                }
+            });
+
+            TableColumn<String[], String> priceCol = new TableColumn<>("Price");
+            priceCol.setPrefWidth(100);
+            priceCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[3]));
+            priceCol.setCellFactory(c -> new TableCell<>() {
+                @Override protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) { setGraphic(null); return; }
+                    Label l = new Label(item);
+                    l.getStyleClass().add("admin-price-label");
+                    setGraphic(l);
+                }
+            });
+
+            inventoryTable.getColumns().addAll(nameCol, catCol, qtyCol, priceCol);
+            inventoryTable.setItems(FXCollections.observableArrayList(inventoryRows));
+            inventoryTable.setPrefHeight(350);
+            inventoryTable.setMinHeight(350);
+            VBox.setVgrow(inventoryTable, Priority.ALWAYS);
+
+            Label inventoryHeader = new Label("INVENTORY");
+            inventoryHeader.getStyleClass().add("admin-report-group-header");
+            container.getChildren().addAll(inventoryHeader, inventoryTable);
+        }
+
+        return container;
+    }
+
 }
