@@ -647,16 +647,535 @@ public class CustomerDashboardView {
                         "-fx-font-size: 14px;"
         );
         btnOrder.setOnAction(e -> {
-            run(controller::placeOrder);
-            showModernSuccess("Votre commande a été passée avec succès !");
-            shell.updateCartCount(0);
-            showCart();
+            showPayment(); // ← Redirige vers la page paiement
         });
 
         rightColumn.getChildren().addAll(lblResume, sep, subtotalRow, deliveryRow, btnOrder);
 
         mainLayout.getChildren().addAll(leftColumn, rightColumn);
         setContent("Panier", mainLayout);
+    }
+    private void showPayment() {
+        shell.setSearchHandler(null);
+        BigDecimal total = controller.cartTotal();
+        List<CartItem> items = controller.cart();
+
+        // ========== LAYOUT PRINCIPAL ==========
+        HBox mainLayout = new HBox(24);
+        mainLayout.setPadding(new Insets(24));
+        mainLayout.setStyle("-fx-background-color: #f8fafc;");
+        mainLayout.setAlignment(Pos.TOP_LEFT);
+
+        // ========== COLONNE GAUCHE ==========
+        VBox leftCol = new VBox(16);
+        HBox.setHgrow(leftCol, Priority.ALWAYS);
+
+        // Bouton retour
+        Button backBtn = createModernBackButton(this::showCart);
+        HBox backWrapper = new HBox(backBtn);
+        backWrapper.setMaxWidth(500);
+
+        // ===== BLOC 1 : MÉTHODE DE PAIEMENT =====
+        VBox paymentBlock = new VBox(16);
+        paymentBlock.setPadding(new Insets(24));
+        paymentBlock.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-border-color: #e2e8f0; -fx-border-radius: 12;");
+
+        HBox stepHeader1 = new HBox(10);
+        stepHeader1.setAlignment(Pos.CENTER_LEFT);
+        Label step1Badge = new Label("1");
+        step1Badge.setPrefSize(26, 26);
+        step1Badge.setAlignment(Pos.CENTER);
+        step1Badge.setStyle("-fx-background-color: #1e3a5f; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-background-radius: 50;");
+        Label step1Title = new Label("Méthode de paiement");
+        step1Title.setStyle("-fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: #1e293b;");
+        stepHeader1.getChildren().addAll(step1Badge, step1Title);
+
+        // --- MÉTHODES DE PAIEMENT ---
+        ToggleGroup group = new ToggleGroup();
+
+        // Carte bancaire
+        VBox cardMethodBox = buildMethodCard(group, true,
+                buildCardIcon(),
+                "Carte bancaire", "Visa · Mastercard · Amex"
+        );
+
+        // À la livraison
+        VBox cashMethodBox = buildMethodCard(group, false,
+                buildCashIcon(),
+                "À la livraison", "Paiement en espèces"
+        );
+
+        // PayPal
+        VBox paypalMethodBox = buildMethodCard(group, false,
+                buildPaypalIcon(),
+                "PayPal", "Paiement en ligne sécurisé"
+        );
+
+        HBox methodGrid = new HBox(12, cardMethodBox, cashMethodBox, paypalMethodBox);
+        HBox.setHgrow(cardMethodBox, Priority.ALWAYS);
+        HBox.setHgrow(cashMethodBox, Priority.ALWAYS);
+        HBox.setHgrow(paypalMethodBox, Priority.ALWAYS);
+        cardMethodBox.setMaxWidth(Double.MAX_VALUE);
+        cashMethodBox.setMaxWidth(Double.MAX_VALUE);
+        paypalMethodBox.setMaxWidth(Double.MAX_VALUE);
+
+        // --- CHAMPS CARTE ---
+        TextField cardNumber = new TextField();
+        cardNumber.setPromptText("1234  5678  9012  3456");
+        TextField cardName = new TextField();
+        cardName.setPromptText("DOUNIA BENALI");
+        TextField expiry = new TextField();
+        expiry.setPromptText("MM / AA");
+
+        // CORRECTION SÉCURITÉ : Remplacement par un PasswordField pour masquer le code secret
+        PasswordField cvv = new PasswordField();
+        cvv.setPromptText("•••");
+
+        HBox expiryRow = new HBox(12);
+        VBox expiryGroup = createModernField("DATE D'EXPIRATION", expiry, "📅");
+        VBox cvvGroup = createModernField("CVV", cvv, "🔒");
+        HBox.setHgrow(expiryGroup, Priority.ALWAYS);
+        HBox.setHgrow(cvvGroup, Priority.ALWAYS);
+        expiryRow.getChildren().addAll(expiryGroup, cvvGroup);
+
+        VBox cardFields = new VBox(14,
+                createModernField("NUMÉRO DE CARTE", cardNumber, ""),
+                createModernField("NOM DU TITULAIRE", cardName, ""),
+                expiryRow
+        );
+        cardFields.setPadding(new Insets(8, 0, 0, 0));
+
+        // Afficher/cacher selon méthode
+        group.selectedToggleProperty().addListener((obs, old, newVal) -> {
+            Object data = ((Toggle) newVal).getUserData();
+            cardFields.setVisible("card".equals(data));
+            cardFields.setManaged("card".equals(data));
+
+            // Mettre à jour le style visuel des cartes
+            updateMethodCardStyle(cardMethodBox, "card".equals(data));
+            updateMethodCardStyle(cashMethodBox, "cash".equals(data));
+            updateMethodCardStyle(paypalMethodBox, "paypal".equals(data));
+        });
+
+        // Lier les userData aux toggles
+        group.getToggles().get(0).setUserData("card");
+        group.getToggles().get(1).setUserData("cash");
+        group.getToggles().get(2).setUserData("paypal");
+
+        paymentBlock.getChildren().addAll(stepHeader1, methodGrid, cardFields);
+
+        // ===== BLOC 2 : ADRESSE =====
+        VBox addressBlock = new VBox(16);
+        addressBlock.setPadding(new Insets(24));
+        addressBlock.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-border-color: #e2e8f0; -fx-border-radius: 12;");
+
+        HBox stepHeader2 = new HBox(10);
+        stepHeader2.setAlignment(Pos.CENTER_LEFT);
+        Label step2Badge = new Label("2");
+        step2Badge.setPrefSize(26, 26);
+        step2Badge.setAlignment(Pos.CENTER);
+        step2Badge.setStyle("-fx-background-color: #1e3a5f; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px; -fx-background-radius: 50;");
+        Label step2Title = new Label("Adresse de livraison");
+        step2Title.setStyle("-fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: #1e293b;");
+        stepHeader2.getChildren().addAll(step2Badge, step2Title);
+
+        TextField street = new TextField();
+        street.setPromptText("123 Rue Mohammed V");
+        TextField city = new TextField();
+        city.setPromptText("Casablanca");
+        TextField zip = new TextField();
+        zip.setPromptText("20000");
+
+        // LISTE DÉROULANTE POUR LE PAYS (Design synchronisé avec showProfile)
+        ComboBox<String> countryCombo = new ComboBox<>();
+        countryCombo.getItems().addAll("Maroc", "France", "Belgique", "Canada", "Espagne", "États-Unis");
+        countryCombo.setValue("Maroc"); // Valeur par défaut initiale
+        countryCombo.setMaxWidth(Double.MAX_VALUE);
+        countryCombo.setPrefHeight(38);
+        countryCombo.setStyle(
+                "-fx-background-color: #f8fafc; " +
+                        "-fx-border-color: #e2e8f0; " +
+                        "-fx-border-radius: 8; " +
+                        "-fx-background-radius: 8; " +
+                        "-fx-font-size: 13px; " +
+                        "-fx-cursor: hand;"
+        );
+
+        // Construction du conteneur de titre pour le ComboBox
+        VBox countryGroup = new VBox(6);
+        Label countryLabel = new Label("PAYS");
+        countryLabel.setStyle("-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #64748b;");
+        countryGroup.getChildren().addAll(countryLabel, countryCombo);
+
+        // Pré-remplir l'adresse depuis le profil si existante
+        String addr = controller.currentUser().getDeliveryAddress();
+        if (addr != null && !addr.isBlank()) {
+            String[] parts = addr.split(", ");
+            if (parts.length > 0) street.setText(parts[0]);
+            if (parts.length > 1) city.setText(parts[1]);
+            if (parts.length > 2) zip.setText(parts[2]);
+            if (parts.length > 3) {
+                String savedCountry = parts[3].trim();
+                // Si le pays de la BDD est dans notre liste, on le sélectionne
+                if (countryCombo.getItems().contains(savedCountry)) {
+                    countryCombo.setValue(savedCountry);
+                }
+            }
+        }
+
+        HBox cityZip = new HBox(12);
+        VBox cityGroup = createModernField("VILLE", city, "");
+        VBox zipGroup = createModernField("CODE POSTAL", zip, "");
+        HBox.setHgrow(cityGroup, Priority.ALWAYS);
+        HBox.setHgrow(zipGroup, Priority.ALWAYS);
+        cityZip.getChildren().addAll(cityGroup, zipGroup);
+
+        addressBlock.getChildren().addAll(
+                stepHeader2,
+                createModernField("RUE ET NUMÉRO", street, ""),
+                cityZip,
+                countryGroup // Utilisation du composant liste déroulante
+        );
+
+        leftCol.getChildren().addAll(backBtn, paymentBlock, addressBlock);
+
+        // ========== COLONNE DROITE : RÉSUMÉ ==========
+        VBox rightCol = new VBox(0);
+        rightCol.setPrefWidth(340);
+        rightCol.setMinWidth(340);
+        rightCol.setMaxWidth(340);
+        rightCol.setPadding(new Insets(20));
+        rightCol.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-border-color: #e2e8f0; -fx-border-radius: 12;");
+
+        Label summaryTitle = new Label("Résumé de la commande");
+        summaryTitle.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #1e293b; -fx-padding: 0 0 14 0;");
+
+        // Articles
+        VBox articlesList = new VBox(0);
+        for (CartItem item : items) {
+            Product p = item.getProduct();
+
+            HBox row = new HBox(12);
+            row.setPadding(new Insets(10, 0, 10, 0));
+            row.setStyle("-fx-border-color: #f1f5f9; -fx-border-width: 0 0 1 0;");
+            row.setAlignment(Pos.CENTER_LEFT);
+
+            // Miniature
+            StackPane thumb = new StackPane();
+            thumb.setPrefSize(54, 54);
+            thumb.setMinSize(54, 54);
+            thumb.setMaxSize(54, 54);
+            thumb.setStyle("-fx-background-color: #f8fafc; -fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8;");
+            if (p.getImageUrl() != null && !p.getImageUrl().isBlank()) {
+                try {
+                    ImageView iv = new ImageView(new Image(resolveImage(p.getImageUrl()), true));
+                    iv.setFitWidth(54);
+                    iv.setFitHeight(54);
+                    iv.setPreserveRatio(true);
+                    thumb.getChildren().add(iv);
+                } catch (Exception ignored) {
+                    thumb.getChildren().add(new Label("📦"));
+                }
+            } else {
+                thumb.getChildren().add(new Label("📦"));
+            }
+
+            // Badge quantité
+            Label qtyBadge = new Label(String.valueOf(item.getQuantity()));
+            qtyBadge.setStyle("-fx-background-color: #1e3a5f; -fx-text-fill: white; -fx-font-size: 10px; -fx-font-weight: bold; -fx-background-radius: 50; -fx-padding: 1 5;");
+            StackPane.setAlignment(qtyBadge, Pos.TOP_RIGHT);
+            StackPane.setMargin(qtyBadge, new Insets(-6, -6, 0, 0));
+            thumb.getChildren().add(qtyBadge);
+
+            VBox info = new VBox(3);
+            HBox.setHgrow(info, Priority.ALWAYS);
+            Label pName = new Label(p.getName());
+            pName.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #1e293b;");
+            pName.setWrapText(true);
+            pName.setMaxWidth(160);
+            info.getChildren().add(pName);
+
+            Label pPrice = new Label(String.format("%,.2f €", p.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()))));
+            pPrice.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #1e293b;");
+
+            row.getChildren().addAll(thumb, info, pPrice);
+            articlesList.getChildren().add(row);
+        }
+
+        // Code promo
+        HBox promoRow = new HBox(8);
+        promoRow.setPadding(new Insets(16, 0, 8, 0));
+        TextField promoField = new TextField();
+        promoField.setPromptText("Code promo");
+        promoField.setPrefHeight(38);
+        promoField.setStyle("-fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 0 12; -fx-font-size: 13px; -fx-background-color: #f8fafc;");
+        HBox.setHgrow(promoField, Priority.ALWAYS);
+
+        Button promoBtn = new Button("Appliquer");
+        promoBtn.setPrefHeight(38);
+        promoBtn.setStyle("-fx-background-color: white; -fx-border-color: #1e3a5f; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 0 14; -fx-font-size: 13px; -fx-text-fill: #1e3a5f; -fx-font-weight: bold; -fx-cursor: hand;");
+        promoRow.getChildren().addAll(promoField, promoBtn);
+
+        // Separator
+        Separator sep = new Separator();
+        VBox.setMargin(sep, new Insets(6, 0, 6, 0));
+
+        // Lignes de prix
+        HBox subRow = buildPriceLine("Sous-total", String.format("%,.2f €", total), false);
+        HBox delivRow = buildPriceLine("Livraison", "Gratuite", false);
+
+        // Badge "Gratuit" en vert
+        Label freeBadge = new Label("✓ Gratuite");
+        freeBadge.setStyle("-fx-background-color: #dcfce7; -fx-text-fill: #16a34a; -fx-font-size: 11px; -fx-font-weight: bold; -fx-background-radius: 20; -fx-padding: 2 8;");
+        delivRow.getChildren().remove(delivRow.getChildren().size() - 1);
+        delivRow.getChildren().add(freeBadge);
+
+        HBox totalRow = buildPriceLine("Total", String.format("%,.2f €", total), true);
+
+        // Bouton confirmer
+        Button btnConfirm = new Button("🔒   Confirmer la commande");
+        btnConfirm.setMaxWidth(Double.MAX_VALUE);
+        btnConfirm.setPrefHeight(50);
+        btnConfirm.setStyle(
+                "-fx-background-color: #1e3a5f;" +
+                        "-fx-text-fill: white;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-font-size: 14px;" +
+                        "-fx-background-radius: 10;" +
+                        "-fx-cursor: hand;"
+        );
+        VBox.setMargin(btnConfirm, new Insets(14, 0, 0, 0));
+
+        btnConfirm.setOnMouseEntered(e -> btnConfirm.setStyle(
+                "-fx-background-color: #162d4a; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14px; -fx-background-radius: 10; -fx-cursor: hand;"
+        ));
+        btnConfirm.setOnMouseExited(e -> btnConfirm.setStyle(
+                "-fx-background-color: #1e3a5f; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14px; -fx-background-radius: 10; -fx-cursor: hand;"
+        ));
+
+        // ==========================================
+        // LOGIQUE ET SÉCURITÉ DU BOUTON
+        // ==========================================
+        btnConfirm.setOnAction(e -> {
+            // Validation complète de l'adresse de livraison (y compris la sélection du ComboBox)
+            if (street.getText().isBlank() || city.getText().isBlank() || zip.getText().isBlank() || countryCombo.getValue() == null) {
+                showModernError("Veuillez renseigner complètement l'adresse de livraison.");
+                return;
+            }
+
+            // Récupérer le mode de paiement choisi
+            String selectedMethod = (String) group.getSelectedToggle().getUserData();
+
+            if ("card".equals(selectedMethod)) {
+                String rawCard = cardNumber.getText().replace(" ", "");
+                String rawExpiry = expiry.getText().trim();
+                String rawCvv = cvv.getText().trim();
+
+                // Validation locale de surface de la carte bancaire
+                if (rawCard.length() < 16 || rawExpiry.length() < 5 || rawCvv.length() < 3) {
+                    showModernError("Les informations de la carte bancaire semblent invalides.");
+                    return;
+                }
+
+                // On exécute la commande via le contrôleur
+                run(controller::placeOrder);
+
+                // SÉCURITÉ : Nettoyage immédiat des données de carte en RAM
+                cardNumber.clear();
+                cardName.clear();
+                expiry.clear();
+                cvv.clear();
+
+            } else if ("paypal".equals(selectedMethod)) {
+                run(controller::placeOrder);
+
+            } else {
+                // Mode "cash" (À la livraison)
+                run(controller::placeOrder);
+            }
+
+            // Finalisation de l'interface graphique
+            shell.updateCartCount(0);
+            showModernSuccess("🎉 Votre commande a été confirmée avec succès !");
+            showOrders();
+        });
+
+        // Note de sécurité
+        HBox secureNote = new HBox(6);
+        secureNote.setAlignment(Pos.CENTER);
+        secureNote.setPadding(new Insets(10, 0, 0, 0));
+        Label lockIcon = new Label("🔒");
+        lockIcon.setStyle("-fx-font-size: 11px;");
+        Label secureLabel = new Label("Paiement 100% sécurisé · SSL");
+        secureLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #94a3b8;");
+        secureNote.getChildren().addAll(lockIcon, secureLabel);
+
+        rightCol.getChildren().addAll(
+                summaryTitle,
+                articlesList,
+                promoRow,
+                sep,
+                subRow,
+                delivRow,
+                totalRow,
+                btnConfirm,
+                secureNote
+        );
+
+        mainLayout.getChildren().addAll(leftCol, rightCol);
+
+        ScrollPane scroll = new ScrollPane(mainLayout);
+        scroll.setFitToWidth(true);
+        scroll.setStyle("-fx-background-color: #f8fafc; -fx-background: #f8fafc; -fx-border-color: transparent;");
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+
+        setContent("PAIEMENT", scroll);
+    }
+
+    private void showModernError(String message) {
+        // Exemple d'implémentation : une alerte JavaFX stylisée en rouge
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Erreur de validation");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+
+        // On applique un style CSS rapide pour rendre le texte ou le design plus moderne
+        alert.getDialogPane().setStyle("-fx-font-family: 'Segoe UI'; -fx-font-size: 14px;");
+
+        alert.showAndWait();
+    }
+
+    // ========== NOUVEAU HELPER : Charger l'image Carte bancaire ==========
+    private StackPane buildCardIcon() {
+        StackPane pane = new StackPane();
+        pane.setPrefSize(52, 34);
+        try {
+            // Charge l'image depuis tes ressources
+            Image img = new Image(getClass().getResourceAsStream("/images/card.png"));
+            ImageView iv = new ImageView(img);
+            iv.setFitWidth(50);  // Ajuste la largeur de l'image
+            iv.setFitHeight(36); // Ajuste la hauteur de l'image
+            iv.setPreserveRatio(true);
+            pane.getChildren().add(iv);
+        } catch (Exception e) {
+            // En cas de problème (image introuvable), on met un carré de secours
+            pane.getChildren().add(new Label("💳"));
+        }
+        return pane;
+    }
+
+    // ========== NOUVEAU HELPER : Charger l'image Livraison ==========
+    private StackPane buildCashIcon() {
+        StackPane pane = new StackPane();
+        pane.setPrefSize(52, 34);
+        try {
+            Image img = new Image(getClass().getResourceAsStream("/images/cash.png"));
+            ImageView iv = new ImageView(img);
+            iv.setFitWidth(50);
+            iv.setFitHeight(36);
+            iv.setPreserveRatio(true);
+            pane.getChildren().add(iv);
+        } catch (Exception e) {
+            pane.getChildren().add(new Label("🚚"));
+        }
+        return pane;
+    }
+
+    // ========== NOUVEAU HELPER : Charger l'image PayPal ==========
+    private StackPane buildPaypalIcon() {
+        StackPane pane = new StackPane();
+        pane.setPrefSize(52, 34);
+        try {
+            Image img = new Image(getClass().getResourceAsStream("/images/paypal.png"));
+            ImageView iv = new ImageView(img);
+            iv.setFitWidth(50);
+            iv.setFitHeight(36);
+            iv.setPreserveRatio(true);
+            pane.getChildren().add(iv);
+        } catch (Exception e) {
+            pane.getChildren().add(new Label("🅿️"));
+        }
+        return pane;
+    }
+
+    // ========== HELPER : Construire une carte méthode ==========
+    private VBox buildMethodCard(ToggleGroup group, boolean selected, StackPane icon, String label, String subtitle) {
+        RadioButton rb = new RadioButton();
+        rb.setToggleGroup(group);
+        rb.setSelected(selected);
+        rb.setVisible(false);
+        rb.setManaged(false);
+
+        VBox card = new VBox(10);
+        card.setAlignment(Pos.CENTER);
+        card.setPadding(new Insets(16, 12, 16, 12));
+        card.setStyle(selected
+                ? "-fx-background-color: #f0f5ff; -fx-background-radius: 10; -fx-border-color: #1e3a5f; -fx-border-radius: 10; -fx-border-width: 2; -fx-cursor: hand;"
+                : "-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #e2e8f0; -fx-border-radius: 10; -fx-border-width: 1.5; -fx-cursor: hand;"
+        );
+
+        Label lblMain = new Label(label);
+        lblMain.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #1e293b;");
+        Label lblSub = new Label(subtitle);
+        lblSub.setStyle("-fx-font-size: 10px; -fx-text-fill: #94a3b8;");
+
+        // Indicateur de sélection
+        Circle dot = new Circle(5);
+        dot.setFill(selected ? Color.web("#1e3a5f") : Color.TRANSPARENT);
+        dot.setStroke(Color.web(selected ? "#1e3a5f" : "#cbd5e1"));
+        dot.setStrokeWidth(1.5);
+
+        card.getChildren().addAll(icon, lblMain, lblSub, dot);
+        card.setUserData(rb);
+
+        card.setOnMouseClicked(e -> {
+            rb.setSelected(true);
+            group.selectToggle(rb);
+        });
+
+        rb.selectedProperty().addListener((obs, old, isSelected) -> {
+            dot.setFill(isSelected ? Color.web("#1e3a5f") : Color.TRANSPARENT);
+            dot.setStroke(Color.web(isSelected ? "#1e3a5f" : "#cbd5e1"));
+            card.setStyle(isSelected
+                    ? "-fx-background-color: #f0f5ff; -fx-background-radius: 10; -fx-border-color: #1e3a5f; -fx-border-radius: 10; -fx-border-width: 2; -fx-cursor: hand;"
+                    : "-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #e2e8f0; -fx-border-radius: 10; -fx-border-width: 1.5; -fx-cursor: hand;"
+            );
+        });
+
+        return card;
+    }
+
+    // ========== HELPER : Mettre à jour style méthode ==========
+    private void updateMethodCardStyle(VBox card, boolean selected) {
+        card.setStyle(selected
+                ? "-fx-background-color: #f0f5ff; -fx-background-radius: 10; -fx-border-color: #1e3a5f; -fx-border-radius: 10; -fx-border-width: 2; -fx-cursor: hand;"
+                : "-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #e2e8f0; -fx-border-radius: 10; -fx-border-width: 1.5; -fx-cursor: hand;"
+        );
+    }
+
+    // ========== HELPER : Ligne de prix ==========
+    private HBox buildPriceLine(String label, String value, boolean isTotal) {
+        HBox row = new HBox();
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.setPadding(new Insets(isTotal ? 12 : 5, 0, 5, 0));
+        if (isTotal) {
+            row.setStyle("-fx-border-color: #e2e8f0; -fx-border-width: 1 0 0 0;");
+        }
+
+        Label lbl = new Label(label);
+        lbl.setStyle("-fx-font-size: " + (isTotal ? "15" : "13") + "px; -fx-text-fill: "
+                + (isTotal ? "#1e293b" : "#64748b") + "; -fx-font-weight: " + (isTotal ? "bold" : "normal") + ";");
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Label val = new Label(value);
+        val.setStyle("-fx-font-size: " + (isTotal ? "17" : "13") + "px; -fx-font-weight: "
+                + (isTotal ? "bold" : "normal") + "; -fx-text-fill: " + (isTotal ? "#1e293b" : "#64748b") + ";");
+
+        row.getChildren().addAll(lbl, spacer, val);
+        return row;
     }
     
     private Button createFilterButton(String text, boolean active, List<Order> allOrders, VBox container, HBox filterParent) {
@@ -793,9 +1312,9 @@ public class CustomerDashboardView {
         root.setStyle("-fx-background-color: white;");
 
         // En-tête avec bouton retour
-        Button backBtn = new Button("← Retour aux commandes");
-        backBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #1a237e; -fx-font-weight: bold; -fx-cursor: hand;");
-        backBtn.setOnAction(e -> showOrders());
+        Button backBtn = createModernBackButton(this::showOrders);
+        HBox backWrapper = new HBox(backBtn);
+        backWrapper.setMaxWidth(500);
 
         Label title = new Label("Détails de la Commande #" + order.getId());
         title.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #1a237e;");
@@ -951,7 +1470,7 @@ public class CustomerDashboardView {
                         () -> setContent("ADRESSE", createAddressPage())),
                 createCompatibleRow("Sécurité du compte", "Changer votre mot de passe", "🔒",
                         () -> setContent("SÉCURITÉ", createSecurityPage())),
-                createCompatibleRow("Contact & Support", contactSubtitle, "📱",
+                createCompatibleRow("Contact & Support", "Gérer vos informations de contact et d'assistance", "📱",
                         () -> setContent("CONTACT", createContactPage()))
         );
 
@@ -1133,7 +1652,7 @@ public class CustomerDashboardView {
         Label title = new Label("Adresse de livraison");
         title.setStyle("-fx-font-size: 28px; -fx-font-weight: 800; -fx-text-fill: #0f172a; -fx-padding: 0 0 10 0;");
 
-        // Séparation de l'adresse
+        // Séparation de l'adresse (Gère les 4 parties : Rue, Ville, Code Postal, Pays)
         String fullAddr = controller.currentUser().getDeliveryAddress() != null ? controller.currentUser().getDeliveryAddress() : "";
         String[] parts = fullAddr.split(", ");
 
@@ -1141,7 +1660,36 @@ public class CustomerDashboardView {
         TextField cityField = new TextField(parts.length > 1 ? parts[1] : "");
         TextField zipField = new TextField(parts.length > 2 ? parts[2] : "");
 
-        // Utilisation de la version sans icône (Option 1)
+        // 1. CRÉATION DE LA LISTE DÉROULANTE (COMBOBOX) POUR LE PAYS
+        ComboBox<String> countryComboBox = new ComboBox<>();
+        countryComboBox.getItems().addAll("Maroc", "France", "Belgique", "Canada", "Sénégal", "Algérie", "Tunisie");
+        countryComboBox.setMaxWidth(Double.MAX_VALUE); // Pour qu'il prenne toute la largeur
+
+        // Style du ComboBox pour correspondre au design épuré et moderne de vos champs
+        countryComboBox.setStyle(
+                "-fx-background-color: white; " +
+                        "-fx-border-color: #e2e8f0; " +
+                        "-fx-border-radius: 8; " +
+                        "-fx-background-radius: 8; " +
+                        "-fx-padding: 8 12; " +
+                        "-fx-font-size: 14px;"
+        );
+
+        // Sélection de la valeur actuelle stockée en base, sinon valeur par défaut
+        if (parts.length > 3 && !parts[3].isEmpty() && countryComboBox.getItems().contains(parts[3])) {
+            countryComboBox.setValue(parts[3]);
+        } else {
+            countryComboBox.setValue("Maroc"); // Valeur par défaut si vide
+        }
+
+        // Structure visuelle pour le Pays (similaire à ce que fait createModernField)
+        VBox countryGroup = new VBox(8);
+        Label countryLabel = new Label("PAYS");
+        countryLabel.setStyle("-fx-font-size: 11px; -fx-font-weight: 700; -fx-text-fill: #64748b; -fx-letter-spacing: 1px;");
+        countryGroup.getChildren().addAll(countryLabel, countryComboBox);
+
+
+        // Création des autres champs avec votre méthode existante
         VBox streetGroup = createModernField("RUE ET NUMÉRO", streetField, "Ex: 123 Rue des Fleurs");
 
         HBox cityZipRow = new HBox(15);
@@ -1151,22 +1699,39 @@ public class CustomerDashboardView {
         HBox.setHgrow(zipGroup, Priority.ALWAYS);
         cityZipRow.getChildren().addAll(cityGroup, zipGroup);
 
+
+        // Bouton de sauvegarde
         Button saveBtn = new Button("Enregistrer l'adresse");
         saveBtn.setMaxWidth(Double.MAX_VALUE);
         saveBtn.setStyle("-fx-background-color: #0f172a; -fx-text-fill: white; -fx-font-weight: bold; " +
                 "-fx-padding: 16; -fx-background-radius: 10; -fx-cursor: hand;");
 
-        // Ajout d'une petite marge au dessus du bouton
+        // Ajout d'une marge au dessus du bouton
         VBox.setMargin(saveBtn, new Insets(15, 0, 0, 0));
 
+        // 2. ACTION DE SAUVEGARDER DANS LA BASE DE DONNÉES
         saveBtn.setOnAction(e -> {
-            String combined = streetField.getText() + ", " + cityField.getText() + ", " + zipField.getText();
+            // Récupération de la valeur sélectionnée dans la liste déroulante (.getValue())
+            String selectedCountry = countryComboBox.getValue() != null ? countryComboBox.getValue() : "";
+
+            // Combinaison des 4 éléments séparés par une virgule et un espace
+            String combined = streetField.getText().trim() + ", " +
+                    cityField.getText().trim() + ", " +
+                    zipField.getText().trim() + ", " +
+                    selectedCountry;
+
+            // Mise à jour de l'objet utilisateur local
             controller.currentUser().setDeliveryAddress(combined);
+
+            // APPEL AU CONTROLLER : Envoie la modification vers votre DAO / Base de données
             controller.updateProfile(controller.currentUser());
+
+            // Redirection vers le profil
             showProfile();
         });
 
-        card.getChildren().addAll(title, streetGroup, cityZipRow, saveBtn);
+        // Assemblage des composants dans la carte
+        card.getChildren().addAll(title, streetGroup, cityZipRow, countryGroup, saveBtn);
         container.getChildren().addAll(backWrapper, card);
 
         return wrapInScrollPane(container);
