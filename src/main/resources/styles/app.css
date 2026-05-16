@@ -1597,11 +1597,6 @@
     -fx-min-height: 45px; /* S'assure qu'il est assez grand */
 }
 
-/* Forcer le contenu à ne pas être coupé */
-.admin-dialog-card {
-    -fx-min-height: -min-content;
-}
-
 .admin-dialog-chrome {
     -fx-alignment: center-right;
 }
@@ -1707,18 +1702,93 @@
     -fx-background-color: #111111;
 }
 
-/* Style de la zone de texte du rapport */
+/* ── REPORTS PAGE ─────────────────────────────────────────── */
+
+.admin-report-hero {
+    -fx-background-color: linear-gradient(to right, #0f1f3d, #1e3a8a, #0f766e);
+    -fx-border-color: transparent;
+}
+.admin-report-hero .admin-page-hero-overline,
+.admin-report-hero .admin-page-hero-title,
+.admin-report-hero .admin-page-hero-subtitle {
+    -fx-text-fill: white;
+}
+
+.admin-report-kpi-row {
+    -fx-padding: 2 0 0 0;
+}
+
+.admin-report-kpi-card {
+    -fx-background-radius: 18px;
+    -fx-border-radius: 18px;
+    -fx-padding: 19;
+    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.10), 18, 0, 0, 8);
+}
+.admin-report-kpi-card:hover {
+    -fx-translate-y: -1px;
+    -fx-effect: dropshadow(gaussian, rgba(37, 99, 235, 0.18), 20, 0, 0, 9);
+}
+.admin-report-kpi-card.revenue    { -fx-background-color: linear-gradient(to bottom right, #ffffff, #eafaf2); -fx-border-color: #bbf7d0; }
+.admin-report-kpi-card.average    { -fx-background-color: linear-gradient(to bottom right, #ffffff, #edf5ff); -fx-border-color: #bfdbfe; }
+.admin-report-kpi-card.conversion { -fx-background-color: linear-gradient(to bottom right, #ffffff, #eef2ff); -fx-border-color: #c7d2fe; }
+.admin-report-kpi-card.alert      { -fx-background-color: linear-gradient(to bottom right, #ffffff, #fff4df); -fx-border-color: #fed7aa; }
+
+.admin-report-kpi-icon {
+    -fx-background-radius: 999px;
+    -fx-font-size: 12px;
+    -fx-font-weight: 900;
+    -fx-min-width: 34px;
+    -fx-min-height: 34px;
+    -fx-alignment: center;
+}
+.admin-report-kpi-icon.revenue    { -fx-background-color: #dcfce7; -fx-text-fill: #15803d; }
+.admin-report-kpi-icon.average    { -fx-background-color: #dbeafe; -fx-text-fill: #1d4ed8; }
+.admin-report-kpi-icon.conversion { -fx-background-color: #e0e7ff; -fx-text-fill: #4338ca; }
+.admin-report-kpi-icon.alert      { -fx-background-color: #ffedd5; -fx-text-fill: #c2410c; }
+
+.admin-report-kpi-value           { -fx-font-size: 30px; -fx-font-weight: 900; -fx-text-fill: #0f172a; }
+.admin-report-kpi-value.revenue   { -fx-text-fill: #15803d; }
+.admin-report-kpi-value.average   { -fx-text-fill: #1d4ed8; }
+.admin-report-kpi-value.conversion{ -fx-text-fill: #4338ca; }
+.admin-report-kpi-value.alert     { -fx-text-fill: #c2410c; }
+
+.admin-report-toolbar {
+    -fx-background-color: #f8fafc;
+    -fx-background-radius: 16px;
+    -fx-border-color: #e2e8f0;
+    -fx-border-radius: 16px;
+    -fx-padding: 12;
+}
+.admin-report-refresh-btn {
+    -fx-background-color: white;
+    -fx-text-fill: #2356d8;
+    -fx-border-color: #cfe0f7;
+    -fx-border-radius: 12px;
+    -fx-background-radius: 12px;
+    -fx-padding: 12 16;
+    -fx-font-weight: 900;
+}
+.admin-report-export-btn {
+    -fx-background-color: linear-gradient(to right, #1d4ed8, #0f766e);
+    -fx-text-fill: white;
+    -fx-background-radius: 12px;
+    -fx-border-radius: 12px;
+    -fx-padding: 12 18;
+    -fx-font-weight: 900;
+    -fx-effect: dropshadow(gaussian, rgba(15, 118, 110, 0.25), 13, 0, 0, 5);
+}
+
 .admin-report-display {
     -fx-background-color: #f9fafb;
     -fx-border-color: #e5e7eb;
-    -fx-border-radius: 12;
-    -fx-background-radius: 12;
-    -fx-font-family: "Consolas", "Monospaced"; /* Garde l'alignement des colonnes */
+    -fx-border-radius: 14;
+    -fx-background-radius: 14;
+    -fx-font-family: "Consolas", "Courier New", monospace;
     -fx-font-size: 13px;
     -fx-text-fill: #374151;
     -fx-padding: 20;
+    -fx-pref-height: 420px;
 }
-
 .admin-report-display .content {
     -fx-background-color: transparent;
 }
@@ -1739,36 +1809,7 @@
     -fx-font-weight: 900;
     -fx-text-fill: #1a202c; /* Couleur foncée pro */
 }
-/* Cache le fond de la barre */
-.scroll-pane .scroll-bar:vertical .track,
-.scroll-pane .scroll-bar:horizontal .track {
-    -fx-background-color: transparent;
-}
 
-/* Cache les flèches haut et bas */
-.scroll-pane .scroll-bar:vertical .increment-button,
-.scroll-pane .scroll-bar:vertical .decrement-button {
-    -fx-background-color: transparent;
-    -fx-shape: "";
-    -fx-padding: 0;
-}
-
-/* Style du "Thumb" (le curseur) : on le rend très fin et gris clair */
-.scroll-pane .scroll-bar:vertical .thumb {
-    -fx-background-color: #cbd5e1; /* Gris bleuté très clair */
-    -fx-background-radius: 10;
-    -fx-background-insets: 0 4 0 4; /* Donne l'aspect fin */
-}
-
-/* Optionnel : cacher complètement le curseur et ne l'afficher qu'au survol */
-.scroll-pane .scroll-bar:vertical {
-    -fx-opacity: 0;
-    -fx-transition: opacity 0.3s;
-}
-
-.scroll-pane:hover .scroll-bar:vertical {
-    -fx-opacity: 1;
-}
 /* Le texte Logout en ROUGE */
 .logout-item-text-red {
     -fx-text-fill: #ef4444; /* Rouge vif professionnel */
@@ -1866,3 +1907,122 @@
 .hamburger-btn:hover {
     -fx-background-color: #eef2ff;
 }
+<<<<<<< HEAD
+=======
+
+/* ── Hide ALL scrollbars everywhere ──────────────────────── */
+.scroll-bar,
+.scroll-bar:vertical,
+.scroll-bar:horizontal,
+.scroll-bar .track,
+.scroll-bar .thumb,
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button,
+.scroll-bar .increment-arrow,
+.scroll-bar .decrement-arrow {
+    -fx-opacity: 0 !important;
+    -fx-pref-width: 0 !important;
+    -fx-pref-height: 0 !important;
+    -fx-min-width: 0 !important;
+    -fx-min-height: 0 !important;
+    -fx-max-width: 0 !important;
+    -fx-max-height: 0 !important;
+    -fx-padding: 0 !important;
+    -fx-background-color: transparent !important;
+}
+
+/* ── Report Detail Body ───────────────────────────────────── */
+.admin-report-body {
+    -fx-background-color: white;
+    -fx-background-radius: 14;
+    -fx-border-color: #e5e7eb;
+    -fx-border-radius: 14;
+    -fx-padding: 24;
+}
+
+.admin-report-section-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #0f172a;
+    -fx-padding: 0 0 4 0;
+}
+
+.admin-report-meta {
+    -fx-font-size: 11px;
+    -fx-text-fill: #94a3b8;
+    -fx-font-weight: 700;
+    -fx-padding: 0 0 8 0;
+}
+
+.admin-report-kv-row {
+    -fx-background-color: #f8fafc;
+    -fx-background-radius: 10;
+    -fx-padding: 10 16;
+    -fx-border-color: #f1f5f9;
+    -fx-border-radius: 10;
+}
+
+.admin-report-kv-key {
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #475569;
+}
+
+.admin-report-kv-value {
+    -fx-font-size: 13px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #0f172a;
+}
+
+.admin-report-group-header {
+    -fx-font-size: 11px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #2356d8;
+    -fx-background-color: #eef4ff;
+    -fx-background-radius: 8;
+    -fx-padding: 6 12;
+}
+
+.admin-report-group {
+    -fx-background-color: #fafbff;
+    -fx-background-radius: 12;
+    -fx-border-color: #e8edf8;
+    -fx-border-radius: 12;
+    -fx-padding: 8;
+}
+
+.admin-report-inventory-row {
+    -fx-background-color: white;
+    -fx-background-radius: 8;
+    -fx-border-color: #f1f5f9;
+    -fx-border-radius: 8;
+    -fx-padding: 10 14;
+    -fx-alignment: center-left;
+}
+
+.admin-report-inventory-row:hover {
+    -fx-background-color: #f8faff;
+    -fx-border-color: #dbeafe;
+}
+
+.admin-report-inventory-name {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #1e293b;
+}
+
+.admin-report-inventory-chip {
+    -fx-background-color: #eef4ff;
+    -fx-text-fill: #2356d8;
+    -fx-background-radius: 999px;
+    -fx-padding: 4 10;
+    -fx-font-size: 11px;
+    -fx-font-weight: 900;
+}
+
+.admin-report-line {
+    -fx-font-size: 12px;
+    -fx-text-fill: #64748b;
+}
+
+>>>>>>> 5288b89ba8282253ed214da567fe7ee889a36f6a
