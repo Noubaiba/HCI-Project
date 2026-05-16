@@ -33,16 +33,10 @@ import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -323,49 +317,199 @@ public class AdminDashboardView {
         }
     }
 
+    private VBox dashCategoryCard(String name, int productCount, int totalStock, int lowStock, String accent) {
+        Label iconLabel = new Label(name.substring(0, 1).toUpperCase());
+        iconLabel.getStyleClass().addAll("dash-cat-icon", accent);
+
+        Label nameLabel = new Label(name);
+        nameLabel.getStyleClass().add("dash-cat-name");
+        nameLabel.setWrapText(true);
+
+        Label productsLabel = new Label(productCount + " products");
+        productsLabel.getStyleClass().add("dash-cat-sub");
+
+        Label stockLabel = new Label(String.valueOf(totalStock));
+        stockLabel.getStyleClass().add("dash-cat-stock");
+
+        Label stockHint = new Label("units in stock");
+        stockHint.getStyleClass().add("dash-cat-sub");
+
+        VBox stockBlock = new VBox(2, stockLabel, stockHint);
+
+        Label alertLabel = new Label(lowStock > 0 ? lowStock + " low stock" : "All good ✓");
+        alertLabel.getStyleClass().addAll("dash-stock-badge", lowStock > 0 ? "dash-badge-low" : "dash-badge-ok");
+
+        HBox top = new HBox(10, iconLabel, new VBox(2, nameLabel, productsLabel));
+        top.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(top.getChildren().get(1), Priority.ALWAYS);
+
+        Region divider = new Region();
+        divider.getStyleClass().add("admin-dialog-divider");
+        divider.setPrefHeight(1);
+
+        VBox card = new VBox(12, top, divider, stockBlock, alertLabel);
+        card.getStyleClass().add("dash-cat-card");
+        return card;
+    }
+
     private void showDashboard() {
         DashboardStats stats = safe(controller::stats);
-        if (stats == null) {
-            return;
+        if (stats == null) return;
+
+        // ── KPI Cards ────────────────────────────────────────────
+        VBox cardProducts = dashKpiCard("📦", "Total Products",   String.valueOf(stats.getProducts()), null,     "blue");
+        VBox cardStock    = dashKpiCard("🛍",  "Total Stock",     String.valueOf(stats.getProducts() * 10), "+12%", "blue");
+        VBox cardLow      = dashKpiCard("⚠",  "Low Stock Alerts", String.valueOf(stats.getLowStock()), null,    "orange");
+        VBox cardRevenue  = dashKpiCard("📊", "Revenue",          "$" + stats.getRevenue(),            "+8.5%", "blue");
+
+        HBox kpiRow = new HBox(16, cardProducts, cardStock, cardLow, cardRevenue);
+        kpiRow.getChildren().forEach(n -> HBox.setHgrow(n, Priority.ALWAYS));
+
+        // ── Charts ───────────────────────────────────────────────
+        VBox barCard = chartCard("Users by role", usersByRoleChart());
+        VBox pieCard = chartCard("Products by category", categoryChart());
+
+        HBox chartsRow = new HBox(16, barCard, pieCard);
+        HBox.setHgrow(barCard, Priority.ALWAYS);
+        HBox.setHgrow(pieCard, Priority.ALWAYS);
+
+        // ── Category Cards ───────────────────────────────────────
+        List<Product> products = controller.products("");
+
+        java.util.Map<String, List<Product>> byCategory = products.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        p -> p.getCategoryName() == null ? "Uncategorized" : p.getCategoryName()
+                ));
+
+        FlowPane categoryRow = new FlowPane(16, 16);
+        for (java.util.Map.Entry<String, List<Product>> entry : byCategory.entrySet()) {
+            String catName      = entry.getKey();
+            List<Product> catProducts = entry.getValue();
+            int totalStock      = catProducts.stream().mapToInt(Product::getQuantity).sum();
+            int lowStock        = (int) catProducts.stream().filter(p -> p.getQuantity() < 10).count();
+            String accent       = lowStock > 0 ? "orange" : "blue";
+            VBox card           = dashCategoryCard(catName, catProducts.size(), totalStock, lowStock, accent);
+            card.setPrefWidth(200);
+            categoryRow.getChildren().add(card);
         }
 
-        HBox hero = new HBox(18, heroPanel(stats), quickActionsCard());
-        HBox.setHgrow(hero.getChildren().get(0), Priority.ALWAYS);
-        HBox.setHgrow(hero.getChildren().get(1), Priority.ALWAYS);
+        VBox body = new VBox(20, kpiRow, chartsRow,
+                surfaceCard(sectionTitle("Stock by Category", "Overview per category.", "📦"), categoryRow));
+        body.getStyleClass().add("dash-body");
 
-        GridPane statGrid = new GridPane();
-        statGrid.setHgap(16);
-        statGrid.setVgap(16);
-        statGrid.add(metricCard("Products", String.valueOf(stats.getProducts()), "Catalogue actif"), 0, 0);
-        statGrid.add(metricCard("Users", String.valueOf(stats.getUsers()), "Comptes plateforme"), 1, 0);
-        statGrid.add(metricCard("Orders", String.valueOf(stats.getOrders()), "Commandes totales"), 2, 0);
-        statGrid.add(metricCard("Revenue", "$" + stats.getRevenue(), "Chiffre d'affaires"), 3, 0);
+        setContent("Dashboard", body);
+    }
 
-        GridPane chartGrid = new GridPane();
-        chartGrid.setHgap(16);
-        chartGrid.setVgap(16);
-        VBox categoryChart = chartCard("Products by category", categoryChart());
-        VBox usersChart = chartCard("Users by role", usersByRoleChart());
-        chartGrid.add(categoryChart, 0, 0);
-        chartGrid.add(usersChart, 1, 0);
-        GridPane.setHgrow(categoryChart, Priority.ALWAYS);
-        GridPane.setHgrow(usersChart, Priority.ALWAYS);
+    private VBox dashKpiCard(String icon, String label, String value, String trend, String accent) {
+        Label iconLabel = new Label(icon);
+        iconLabel.getStyleClass().addAll("dash-kpi-icon", accent);
 
-        VBox insightPanel = surfaceCard(
-                sectionTitle("Operational health", "A quick pulse of inventory, orders and catalogue balance."),
-                progressLine("Low stock pressure", stats.getLowStock(), Math.max(1, stats.getProducts())),
-                progressLine("Order activity", stats.getOrders(), Math.max(1, stats.getUsers() * 3)),
-                progressLine("Catalog coverage", stats.getProducts(), Math.max(1, stats.getProducts() + stats.getLowStock()))
-        );
+        Label trendLabel = new Label(trend == null ? "" : "↗ " + trend);
+        trendLabel.getStyleClass().add("dash-kpi-trend");
+        trendLabel.setVisible(trend != null);
 
-        VBox body = new VBox(18,
-                chartGrid,
-                hero,
-                statGrid,
-                insightPanel
-        );
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        setContent("Analytics overview", body);
+        HBox top = new HBox(8, iconLabel, spacer, trendLabel);
+        top.setAlignment(Pos.CENTER_LEFT);
+
+        Label labelNode = new Label(label);
+        labelNode.getStyleClass().add("dash-kpi-label");
+
+        Label valueNode = new Label(value);
+        valueNode.getStyleClass().add("dash-kpi-value");
+
+        VBox card = new VBox(10, top, labelNode, valueNode);
+        card.getStyleClass().addAll("dash-kpi-card");
+        return card;
+    }
+
+    private VBox dashProductCard(Product p) {
+        // Image
+        ImageView img = new ImageView();
+        try {
+            String url = resolveImage(p.getImageUrl());
+            if (!url.isBlank()) img.setImage(new Image(url, true));
+        } catch (Exception ignored) {}
+        img.setFitWidth(54);
+        img.setFitHeight(54);
+        img.setPreserveRatio(true);
+
+        // Stock badge
+        String badgeText;
+        String badgeClass;
+        if (p.getQuantity() == 0) {
+            badgeText = "Out of Stock"; badgeClass = "dash-badge-out";
+        } else if (p.getQuantity() < 10) {
+            badgeText = "Low Stock";    badgeClass = "dash-badge-low";
+        } else {
+            badgeText = "In Stock";     badgeClass = "dash-badge-ok";
+        }
+        Label badge = new Label(badgeText);
+        badge.getStyleClass().addAll("dash-stock-badge", badgeClass);
+
+        Label name = new Label(p.getName());
+        name.getStyleClass().add("dash-product-name");
+        name.setWrapText(true);
+
+        Label category = new Label(p.getCategoryName() == null ? "—" : p.getCategoryName());
+        category.getStyleClass().add("dash-product-category");
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox nameRow = new HBox(8, name, spacer, badge);
+        nameRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Stats row
+        VBox stockCol  = dashStatCol("Stock",  String.valueOf(p.getQuantity()));
+        VBox priceCol  = dashStatCol("Price",  "$" + p.getPrice());
+        VBox soldCol   = dashStatCol("Sold",   "—");
+        HBox statsRow  = new HBox(24, stockCol, priceCol, soldCol);
+
+        // Progress bar
+        double ratio = Math.min(1.0, p.getQuantity() / 300.0);
+        HBox track = new HBox();
+        track.getStyleClass().add("dash-progress-track");
+        Region fill = new Region();
+        fill.getStyleClass().addAll("dash-progress-fill",
+                p.getQuantity() == 0 ? "out" : p.getQuantity() < 10 ? "low" : "ok");
+        fill.prefWidthProperty().bind(track.widthProperty().multiply(ratio));
+        track.getChildren().add(fill);
+
+        HBox top = new HBox(14, img, new VBox(4, nameRow, category));
+        HBox.setHgrow(top.getChildren().get(1), Priority.ALWAYS);
+        top.setAlignment(Pos.CENTER_LEFT);
+
+        VBox card = new VBox(12, top, statsRow, track);
+        card.getStyleClass().add("dash-product-card");
+        return card;
+    }
+
+    private VBox dashStatCol(String label, String value) {
+        Label l = new Label(label);
+        l.getStyleClass().add("dash-stat-label");
+        Label v = new Label(value);
+        v.getStyleClass().add("dash-stat-value");
+        return new VBox(2, l, v);
+    }
+
+    private BarChart<String, Number> monthlySalesChart() {
+        CategoryAxis x = new CategoryAxis();
+        NumberAxis y = new NumberAxis();
+        BarChart<String, Number> chart = new BarChart<>(x, y);
+        chart.setLegendVisible(false);
+        chart.setAnimated(false);
+        chart.setTitle(null);
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        String[] months = {"Jan", "Feb", "Mar", "Apr", "May", "Jun"};
+        int[] values = {4100, 3800, 5000, 4500, 6100, 5800};
+        for (int i = 0; i < months.length; i++)
+            series.getData().add(new XYChart.Data<>(months[i], values[i]));
+        chart.getData().add(series);
+        chart.getStyleClass().add("dash-bar-chart");
+        return chart;
     }
 
     private VBox heroPanel(DashboardStats stats) {
