@@ -1,0 +1,8 @@
+[33ma605788[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{0}: reset: moving to ORIG_HEAD
+[33m08dcca4[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{1}: pull origin main: Fast-forward
+[33ma605788[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{2}: reset: moving to HEAD
+[33ma605788[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{3}: commit: update sidebar
+[33m67038ea[m HEAD@{4}: commit: update profil2
+[33md32c67d[m HEAD@{5}: pull origin main: Fast-forward
+[33m72d2ec5[m HEAD@{6}: reset: moving to HEAD
+[33m72d2ec5[m HEAD@{7}: clone: from https://github.com/Noubaiba/HCI-Project.git

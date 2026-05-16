@@ -11,6 +11,7 @@ import com.ecommerce.stockapp.model.UserStatus;
 import jakarta.mail.MessagingException;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
@@ -23,6 +24,7 @@ import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableCell;
@@ -212,7 +214,6 @@ public class AdminDashboardView {
         );
 
         VBox body = new VBox(18,
-                pageHero("Analytics overview", "A calmer, clearer snapshot of your admin activity.", "Admin analytics"),
                 chartGrid,
                 hero,
                 statGrid,
@@ -363,13 +364,10 @@ public class AdminDashboardView {
         VBox copy = new VBox(8, overline, heroTitle, heroSubtitle);
         copy.setAlignment(Pos.CENTER_LEFT);
 
-        VBox side = new VBox(8, infoChip("Clean admin flow"), infoChip("Faster decisions"));
-        side.setAlignment(Pos.CENTER_RIGHT);
-
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        HBox hero = new HBox(18, copy, spacer, side);
+        HBox hero = new HBox(18, copy, spacer);
         hero.getStyleClass().add("admin-page-hero");
         hero.setAlignment(Pos.CENTER_LEFT);
         return hero;
@@ -441,7 +439,6 @@ public class AdminDashboardView {
         });
 
         VBox body = new VBox(16,
-                pageHero("Product management", "Search, create, edit and clean up your catalogue from one workspace.", "Catalog operations"),
                 surfaceCard(Ui.toolbar(search, add, categories, export, delete)),
                 surfaceCard(table)
         );
@@ -450,52 +447,72 @@ public class AdminDashboardView {
     }
 
     private void showUsers() {
+        List<User> users = controller.users();
         TableView<User> table = new TableView<>();
-        decorateTable(table, 58);
-        table.setItems(FXCollections.observableArrayList(controller.users()));
-        table.getColumns().add(col("Name", User::getName));
+        decorateTable(table, 68);
+        table.setItems(FXCollections.observableArrayList(users));
+        table.getColumns().add(userIdentityColumn());
         table.getColumns().add(col("Email", User::getEmail));
-        table.getColumns().add(col("Role", u -> u.getRole().name()));
-        table.getColumns().add(col("Status", u -> u.getStatus().name()));
+        table.getColumns().add(userRoleColumn());
+        table.getColumns().add(userStatusColumn());
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
 
         Button stockManager = Ui.primary("+ Stock manager");
+        stockManager.getStyleClass().add("admin-action-primary");
         stockManager.setOnAction(e -> {
             createStockManagerDialog();
             table.setItems(FXCollections.observableArrayList(controller.users()));
         });
 
         Button activate = Ui.secondary("Activate");
+        activate.getStyleClass().add("admin-action-success");
         activate.setOnAction(e -> updateUser(table, UserStatus.ACTIVE));
         Button deactivate = Ui.secondary("Deactivate");
+        deactivate.getStyleClass().add("admin-action-muted");
         deactivate.setOnAction(e -> updateUser(table, UserStatus.INACTIVE));
         Button block = Ui.danger("Block");
+        block.getStyleClass().add("admin-action-danger");
         block.setOnAction(e -> updateUser(table, UserStatus.BLOCKED));
         Button export = Ui.secondary("Export CSV");
+        export.getStyleClass().add("admin-action-export");
         export.setOnAction(e -> exportUsers(table.getItems()));
 
+        HBox overview = new HBox(16,
+                adminOverviewCard("Total users", String.valueOf(users.size()), "All platform accounts", "U", "blue"),
+                adminOverviewCard("Active", String.valueOf(countUsers(users, UserStatus.ACTIVE)), "Ready to use the store", "A", "green"),
+                adminOverviewCard("Inactive", String.valueOf(countUsers(users, UserStatus.INACTIVE)), "Waiting for activation", "I", "orange"),
+                adminOverviewCard("Blocked", String.valueOf(countUsers(users, UserStatus.BLOCKED)), "Restricted access", "B", "red")
+        );
+        overview.getStyleClass().add("admin-overview-row");
+
+        HBox toolbar = Ui.toolbar(stockManager, activate, deactivate, export, block);
+        toolbar.getStyleClass().add("admin-management-toolbar");
+
         VBox body = new VBox(16,
-                pageHero("User administration", "Manage account states and onboard stock managers with a cleaner workflow.", "Access and accounts"),
-                surfaceCard(Ui.toolbar(stockManager, activate, deactivate, export, block)),
+                overview,
+                surfaceCard(sectionTitle("Account control", "Create managers, update access and export users from one clean workspace.", "U"), toolbar),
                 surfaceCard(table)
         );
         setContent("User administration", body);
     }
 
     private void showOrders() {
+        List<Order> orders = controller.orders();
         TableView<Order> table = new TableView<>();
-        decorateTable(table, 58);
-        table.setItems(FXCollections.observableArrayList(controller.orders()));
-        table.getColumns().add(col("Order", o -> "#" + o.getId()));
-        table.getColumns().add(col("Customer", Order::getCustomerName));
-        table.getColumns().add(col("Total", o -> "$" + o.getTotalPrice()));
-        table.getColumns().add(col("Status", o -> o.getStatus().name()));
-        table.getColumns().add(col("Date", o -> o.getDate().toString()));
+        decorateTable(table, 68);
+        table.setItems(FXCollections.observableArrayList(orders));
+        table.getColumns().add(orderIdColumn());
+        table.getColumns().add(orderCustomerColumn());
+        table.getColumns().add(orderTotalColumn());
+        table.getColumns().add(orderStatusColumn());
+        table.getColumns().add(orderDateColumn());
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
 
         ComboBox<OrderStatus> status = new ComboBox<>(FXCollections.observableArrayList(OrderStatus.values()));
         status.setPromptText("Set status");
+        status.getStyleClass().add("admin-order-status-picker");
         Button update = Ui.primary("Update order");
+        update.getStyleClass().add("admin-action-primary");
         update.setOnAction(e -> {
             Order order = table.getSelectionModel().getSelectedItem();
             if (order != null && status.getValue() != null) {
@@ -504,14 +521,318 @@ public class AdminDashboardView {
             }
         });
         Button export = Ui.secondary("Export CSV");
+        export.getStyleClass().add("admin-action-export");
         export.setOnAction(e -> exportOrders(table.getItems()));
 
+        HBox overview = new HBox(16,
+                adminOverviewCard("Total orders", String.valueOf(orders.size()), "Orders in the pipeline", "O", "blue"),
+                adminOverviewCard("Pending", String.valueOf(countOrders(orders, OrderStatus.PENDING, OrderStatus.PROCESSING)), "Need attention", "P", "orange"),
+                adminOverviewCard("Completed", String.valueOf(countOrders(orders, OrderStatus.PAID, OrderStatus.SHIPPED, OrderStatus.DELIVERED)), "Healthy customer flow", "C", "green"),
+                adminOverviewCard("Cancelled", String.valueOf(countOrders(orders, OrderStatus.CANCELLED)), "Lost or stopped orders", "X", "red")
+        );
+        overview.getStyleClass().add("admin-overview-row");
+
+        HBox toolbar = Ui.toolbar(status, update, export);
+        toolbar.getStyleClass().add("admin-management-toolbar");
+
         VBox body = new VBox(16,
-                pageHero("All orders", "Keep the order pipeline tidy and update statuses without friction.", "Order flow"),
-                surfaceCard(Ui.toolbar(status, update, export)),
+                overview,
+                surfaceCard(sectionTitle("Order workflow", "Select an order, change its status and keep fulfillment moving.", "O"), toolbar),
                 surfaceCard(table)
         );
         setContent("All orders", body);
+    }
+
+    private VBox adminOverviewCard(String label, String value, String detail, String iconText, String accentClass) {
+        Label icon = new Label(iconText);
+        icon.getStyleClass().add("admin-overview-icon");
+        icon.getStyleClass().add(accentClass);
+
+        Label caption = new Label(label.toUpperCase());
+        caption.getStyleClass().add("admin-card-overline");
+
+        Label number = new Label(value);
+        number.getStyleClass().add("admin-overview-value");
+
+        Label hint = new Label(detail);
+        hint.getStyleClass().add("admin-overview-detail");
+        hint.setWrapText(true);
+
+        HBox top = new HBox(10, icon, caption);
+        top.setAlignment(Pos.CENTER_LEFT);
+
+        VBox card = new VBox(11, top, number, hint);
+        card.getStyleClass().add("admin-overview-card");
+        card.getStyleClass().add(accentClass);
+        HBox.setHgrow(card, Priority.ALWAYS);
+        return card;
+    }
+
+    private int countUsers(List<User> users, UserStatus status) {
+        int count = 0;
+        for (User user : users) {
+            if (user.getStatus() == status) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private int countOrders(List<Order> orders, OrderStatus... statuses) {
+        int count = 0;
+        for (Order order : orders) {
+            for (OrderStatus status : statuses) {
+                if (order.getStatus() == status) {
+                    count++;
+                    break;
+                }
+            }
+        }
+        return count;
+    }
+
+    private TableColumn<User, String> userIdentityColumn() {
+        TableColumn<User, String> column = new TableColumn<>("User");
+        column.setPrefWidth(240);
+        column.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getName()));
+        column.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
+                    setText(null);
+                    setGraphic(null);
+                    return;
+                }
+
+                User user = getTableView().getItems().get(getIndex());
+                Label avatar = new Label(initials(user.getName()));
+                avatar.getStyleClass().add("admin-user-avatar");
+
+                Label name = new Label(user.getName());
+                name.getStyleClass().add("admin-user-name");
+
+                Label id = new Label("ID #" + user.getId());
+                id.getStyleClass().add("admin-user-id");
+
+                VBox copy = new VBox(3, name, id);
+                copy.setAlignment(Pos.CENTER_LEFT);
+
+                HBox row = new HBox(11, avatar, copy);
+                row.setAlignment(Pos.CENTER_LEFT);
+                setText(null);
+                setGraphic(row);
+            }
+        });
+        return column;
+    }
+
+    private TableColumn<User, String> userRoleColumn() {
+        TableColumn<User, String> column = new TableColumn<>("Role");
+        column.setPrefWidth(170);
+        column.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getRole() == null ? "" : data.getValue().getRole().name()));
+        column.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setText(null);
+                    setGraphic(null);
+                    return;
+                }
+                Label badge = new Label(item == null ? "UNKNOWN" : item.replace('_', ' '));
+                badge.getStyleClass().add("admin-role-badge");
+                setText(null);
+                setGraphic(badge);
+            }
+        });
+        return column;
+    }
+
+    private TableColumn<User, String> userStatusColumn() {
+        TableColumn<User, String> column = new TableColumn<>("Status");
+        column.setPrefWidth(160);
+        column.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getStatus() == null ? "" : data.getValue().getStatus().name()));
+        column.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setText(null);
+                    setGraphic(null);
+                    return;
+                }
+                Label badge = new Label(item == null || item.isBlank() ? "UNKNOWN" : item);
+                badge.getStyleClass().add("admin-status-badge");
+                badge.getStyleClass().add(statusAccent(item));
+                setText(null);
+                setGraphic(badge);
+            }
+        });
+        return column;
+    }
+
+    private TableColumn<Order, String> orderIdColumn() {
+        TableColumn<Order, String> column = new TableColumn<>("Order");
+        column.setPrefWidth(130);
+        column.setCellValueFactory(data -> new SimpleStringProperty("#" + data.getValue().getId()));
+        column.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setText(null);
+                    setGraphic(null);
+                    return;
+                }
+                Label label = new Label(item);
+                label.getStyleClass().add("admin-order-id");
+                setText(null);
+                setGraphic(label);
+            }
+        });
+        return column;
+    }
+
+    private TableColumn<Order, String> orderCustomerColumn() {
+        TableColumn<Order, String> column = new TableColumn<>("Customer");
+        column.setPrefWidth(230);
+        column.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getCustomerName()));
+        column.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
+                    setText(null);
+                    setGraphic(null);
+                    return;
+                }
+
+                Order order = getTableView().getItems().get(getIndex());
+                Label avatar = new Label(initials(order.getCustomerName()));
+                avatar.getStyleClass().add("admin-order-avatar");
+
+                Label customer = new Label(item == null || item.isBlank() ? "Customer" : item);
+                customer.getStyleClass().add("admin-user-name");
+
+                Label detail = new Label("Customer #" + order.getUserId());
+                detail.getStyleClass().add("admin-user-id");
+
+                VBox copy = new VBox(3, customer, detail);
+                copy.setAlignment(Pos.CENTER_LEFT);
+                HBox row = new HBox(11, avatar, copy);
+                row.setAlignment(Pos.CENTER_LEFT);
+                setText(null);
+                setGraphic(row);
+            }
+        });
+        return column;
+    }
+
+    private TableColumn<Order, String> orderTotalColumn() {
+        TableColumn<Order, String> column = new TableColumn<>("Total");
+        column.setPrefWidth(140);
+        column.setCellValueFactory(data -> new SimpleStringProperty(formatPrice(data.getValue().getTotalPrice())));
+        column.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setText(null);
+                    setGraphic(null);
+                    return;
+                }
+                Label price = new Label(item);
+                price.getStyleClass().add("admin-order-total");
+                setText(null);
+                setGraphic(price);
+            }
+        });
+        return column;
+    }
+
+    private TableColumn<Order, String> orderStatusColumn() {
+        TableColumn<Order, String> column = new TableColumn<>("Status");
+        column.setPrefWidth(170);
+        column.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getStatus() == null ? "" : data.getValue().getStatus().name()));
+        column.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setText(null);
+                    setGraphic(null);
+                    return;
+                }
+                Label badge = new Label(item == null ? "UNKNOWN" : item);
+                badge.getStyleClass().add("admin-order-status-badge");
+                badge.getStyleClass().add(orderAccent(item));
+                setText(null);
+                setGraphic(badge);
+            }
+        });
+        return column;
+    }
+
+    private TableColumn<Order, String> orderDateColumn() {
+        TableColumn<Order, String> column = new TableColumn<>("Date");
+        column.setPrefWidth(170);
+        column.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getDate() == null ? "" : data.getValue().getDate().format(EXPORT_DATE_FORMAT)));
+        column.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setText(null);
+                    setGraphic(null);
+                    return;
+                }
+                Label date = new Label(item);
+                date.getStyleClass().add("admin-order-date");
+                setText(null);
+                setGraphic(date);
+            }
+        });
+        return column;
+    }
+
+    private String statusAccent(String status) {
+        String value = status == null ? "" : status.toUpperCase();
+        if (value.contains("BLOCKED")) {
+            return "blocked";
+        }
+        if (value.contains("INACTIVE")) {
+            return "inactive";
+        }
+        if (value.contains("ACTIVE")) {
+            return "active";
+        }
+        return "inactive";
+    }
+
+    private String orderAccent(String status) {
+        String value = status == null ? "" : status.toUpperCase();
+        if (value.contains("DELIVERED") || value.contains("SHIPPED") || value.contains("PAID")) {
+            return "completed";
+        }
+        if (value.contains("CANCELLED")) {
+            return "cancelled";
+        }
+        if (value.contains("PROCESSING")) {
+            return "processing";
+        }
+        return "pending";
+    }
+
+    private String initials(String name) {
+        if (name == null || name.isBlank()) {
+            return "U";
+        }
+        String[] parts = name.trim().split("\\s+");
+        if (parts.length == 1) {
+            return parts[0].substring(0, 1).toUpperCase();
+        }
+        return (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1)).toUpperCase();
     }
 
     private void showReports() {
@@ -544,7 +865,6 @@ public class AdminDashboardView {
 
         // Construction de la page avec un ScrollPane invisible
         VBox contentBody = new VBox(20,
-                pageHero("Rapports d'activité", "Analyse détaillée des performances de la plateforme.", "Business Intelligence"),
                 kpiRow,
                 surfaceCard(
                         sectionTitle("Détails du rapport", "Données consolidées en temps réel"),
@@ -578,13 +898,176 @@ public class AdminDashboardView {
     }
 
     private void showLogs() {
-        ListView<String> list = new ListView<>(FXCollections.observableArrayList(controller.logs()));
+        var logs = FXCollections.observableArrayList(controller.logs());
+        FilteredList<String> filteredLogs = new FilteredList<>(logs, log -> true);
+
+        TextField search = Ui.text("Search logs, users, actions...");
+        search.getStyleClass().add("admin-log-search");
+        search.textProperty().addListener((observable, oldValue, value) -> {
+            String needle = value == null ? "" : value.trim().toLowerCase();
+            filteredLogs.setPredicate(log -> needle.isBlank() || log.toLowerCase().contains(needle));
+        });
+
+        ListView<String> list = new ListView<>(filteredLogs);
         list.getStyleClass().add("admin-data-list");
+        list.getStyleClass().add("admin-log-list");
+        list.setPrefHeight(540);
+        list.setMinHeight(360);
+        list.setCellFactory(view -> new ListCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                    return;
+                }
+                setText(null);
+                setGraphic(logRow(item));
+            }
+        });
+
+        Button refresh = Ui.secondary("Refresh");
+        refresh.getStyleClass().add("admin-log-toolbar-button");
+        refresh.setOnAction(e -> showLogs());
+
+        Button export = Ui.secondary("Export CSV");
+        export.getStyleClass().add("admin-log-export-button");
+        export.setOnAction(e -> exportLogs(filteredLogs));
+
+        HBox summary = new HBox(16,
+                logSummaryCard("Total events", String.valueOf(logs.size()), "Last 100 system actions", "T", "total"),
+                logSummaryCard("Security", String.valueOf(countLogs(logs, "LOGIN", "ACTIVATE")), "Access and account activity", "S", "security"),
+                logSummaryCard("Catalog", String.valueOf(countLogs(logs, "PRODUCT", "CATEGORY", "STOCK")), "Inventory and product updates", "C", "catalog"),
+                logSummaryCard("Orders", String.valueOf(countLogs(logs, "ORDER")), "Customer order lifecycle", "O", "order")
+        );
+        summary.getStyleClass().add("admin-log-summary-row");
+
+        HBox toolbar = Ui.toolbar(search, refresh, export);
+        toolbar.getStyleClass().add("admin-log-toolbar");
+        HBox.setHgrow(search, Priority.ALWAYS);
+
         VBox body = new VBox(16,
-                pageHero("System logs", "Recent system actions and admin events.", "Audit trail"),
-                surfaceCard(list)
+                summary,
+                surfaceCard(sectionTitle("Live activity", "Filter, review and export recent events with a cleaner admin flow.", "A"), toolbar, list)
         );
         setContent("System logs", body);
+    }
+
+    private VBox logSummaryCard(String label, String value, String detail, String iconText, String accentClass) {
+        Label icon = new Label(iconText);
+        icon.getStyleClass().add("admin-log-summary-icon");
+        icon.getStyleClass().add(accentClass);
+
+        Label labelNode = new Label(label.toUpperCase());
+        labelNode.getStyleClass().add("admin-card-overline");
+
+        Label valueNode = new Label(value);
+        valueNode.getStyleClass().add("admin-log-summary-value");
+
+        Label detailNode = new Label(detail);
+        detailNode.getStyleClass().add("subtitle");
+        detailNode.setWrapText(true);
+
+        HBox top = new HBox(10, icon, labelNode);
+        top.setAlignment(Pos.CENTER_LEFT);
+
+        VBox card = new VBox(10, top, valueNode, detailNode);
+        card.getStyleClass().add("admin-log-summary-card");
+        card.getStyleClass().add(accentClass);
+        HBox.setHgrow(card, Priority.ALWAYS);
+        return card;
+    }
+
+    private int countLogs(List<String> logs, String... keywords) {
+        int count = 0;
+        for (String log : logs) {
+            String upper = log == null ? "" : log.toUpperCase();
+            for (String keyword : keywords) {
+                if (upper.contains(keyword)) {
+                    count++;
+                    break;
+                }
+            }
+        }
+        return count;
+    }
+
+    private HBox logRow(String rawLog) {
+        String[] parts = rawLog.split("\\s\\|\\s", 4);
+        String time = parts.length > 0 ? parts[0] : "";
+        String actor = parts.length > 1 ? parts[1] : "system";
+        String action = parts.length > 2 ? parts[2] : "SYSTEM_EVENT";
+        String details = parts.length > 3 ? parts[3] : rawLog;
+
+        Label icon = new Label(logInitial(action));
+        icon.getStyleClass().add("admin-log-row-icon");
+        icon.getStyleClass().add(logAccentClass(action));
+
+        Label actionBadge = new Label(action.replace('_', ' '));
+        actionBadge.getStyleClass().add("admin-log-action-badge");
+        actionBadge.getStyleClass().add(logAccentClass(action));
+        actionBadge.setWrapText(true);
+
+        Label actorLabel = new Label(actor);
+        actorLabel.getStyleClass().add("admin-log-actor");
+
+        Label timeLabel = new Label(time);
+        timeLabel.getStyleClass().add("admin-log-time");
+
+        HBox meta = new HBox(10, actorLabel, timeLabel);
+        meta.setAlignment(Pos.CENTER_LEFT);
+
+        Label detailsLabel = new Label(details);
+        detailsLabel.getStyleClass().add("admin-log-details");
+        detailsLabel.setWrapText(true);
+
+        VBox content = new VBox(8, meta, actionBadge, detailsLabel);
+        content.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(content, Priority.ALWAYS);
+
+        HBox row = new HBox(16, icon, content);
+        row.getStyleClass().add("admin-log-row");
+        row.getStyleClass().add(logAccentClass(action));
+        row.setAlignment(Pos.CENTER_LEFT);
+        return row;
+    }
+
+    private String logInitial(String action) {
+        if (action == null || action.isBlank()) {
+            return "A";
+        }
+        return action.substring(0, 1).toUpperCase();
+    }
+
+    private String logAccentClass(String action) {
+        String upper = action == null ? "" : action.toUpperCase();
+        if (upper.contains("DELETE") || upper.contains("FAILED") || upper.contains("BLOCK")) {
+            return "danger";
+        }
+        if (upper.contains("LOGIN") || upper.contains("ACTIVATE") || upper.contains("EMAIL")) {
+            return "security";
+        }
+        if (upper.contains("ORDER")) {
+            return "order";
+        }
+        if (upper.contains("PRODUCT") || upper.contains("CATEGORY") || upper.contains("STOCK")) {
+            return "catalog";
+        }
+        return "neutral";
+    }
+
+    private void exportLogs(List<String> logs) {
+        StringBuilder csv = new StringBuilder("date,actor,action,details\n");
+        for (String log : logs) {
+            String[] parts = log.split("\\s\\|\\s", 4);
+            csv.append(csvCell(parts.length > 0 ? parts[0] : ""))
+                    .append(csvCell(parts.length > 1 ? parts[1] : ""))
+                    .append(csvCell(parts.length > 2 ? parts[2] : ""))
+                    .append(csvCell(parts.length > 3 ? parts[3] : log))
+                    .append('\n');
+        }
+        exportCsv("system-logs-export.csv", csv.toString());
     }
 
     private TableView<Product> productTable() {
