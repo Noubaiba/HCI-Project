@@ -305,7 +305,7 @@ public class CustomerDashboardView {
         header.getChildren().addAll(title, headerSpacer, btnClose);
 
         // Prix
-        Label price = new Label(product.getPrice() + " MAD");
+        Label price = new Label(product.getPrice() + " €");
         price.setStyle("-fx-font-size: 24px; -fx-font-weight: 800; -fx-text-fill: #000;");
 
         // --- SÉLECTEUR DE QUANTITÉ PERSONNALISÉ (+ / -) ---
@@ -1251,7 +1251,7 @@ public class CustomerDashboardView {
         statsBox.setAlignment(Pos.CENTER);
         statsBox.getChildren().addAll(
                 createStatCard("Total commandes", String.valueOf(totalCount), "Historique complet"),
-                createStatCard("Total dépensé", totalMoney + " MAD", "Toutes périodes"),
+                createStatCard("Total dépensé", totalMoney + " €", "Toutes périodes"),
                 createStatCard("En attente", String.valueOf(pendingCount), "À traiter"),
                 createStatCard("Livrées", String.valueOf(deliveredCount), "Compte client")
         );
@@ -1294,7 +1294,7 @@ public class CustomerDashboardView {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        Label price = new Label(order.getTotalPrice() + " MAD");
+        Label price = new Label(order.getTotalPrice() + " €");
         price.setStyle("-fx-font-weight: bold; -fx-font-size: 18px; -fx-text-fill: #1a237e;");
 
         Button btn = new Button("Voir détails >");
@@ -1389,7 +1389,7 @@ public class CustomerDashboardView {
         VBox priceTag = new VBox(5);
         priceTag.setAlignment(Pos.CENTER_RIGHT);
 
-        Label price = new Label(item.getPrice() + " MAD");
+        Label price = new Label(item.getPrice() + " €");
         price.setStyle("-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #e74c3c;");
 
         Label qty = new Label("Qté: " + item.getQuantity());
@@ -1646,11 +1646,18 @@ public class CustomerDashboardView {
         HBox backWrapper = new HBox(backBtn);
         backWrapper.setMaxWidth(500);
 
-        VBox card = new VBox(20);
+        VBox card = new VBox(20); // Espacement homogène à 20
         card.setMaxWidth(500);
 
         Label title = new Label("Adresse de livraison");
         title.setStyle("-fx-font-size: 28px; -fx-font-weight: 800; -fx-text-fill: #0f172a; -fx-padding: 0 0 10 0;");
+
+        // UI/UX : Bandeau de succès vert (Masqué par défaut)
+        Label successLabel = new Label();
+        successLabel.setStyle("-fx-text-fill: #15803d; -fx-background-color: #f0fdf4; -fx-border-color: #bbf7d0; -fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 14; -fx-font-weight: 600; -fx-font-size: 14px; -fx-alignment: center;");
+        successLabel.setMaxWidth(Double.MAX_VALUE);
+        successLabel.setVisible(false);
+        successLabel.setManaged(false);
 
         // Séparation de l'adresse (Gère les 4 parties : Rue, Ville, Code Postal, Pays)
         String fullAddr = controller.currentUser().getDeliveryAddress() != null ? controller.currentUser().getDeliveryAddress() : "";
@@ -1663,9 +1670,8 @@ public class CustomerDashboardView {
         // 1. CRÉATION DE LA LISTE DÉROULANTE (COMBOBOX) POUR LE PAYS
         ComboBox<String> countryComboBox = new ComboBox<>();
         countryComboBox.getItems().addAll("Maroc", "France", "Belgique", "Canada", "Sénégal", "Algérie", "Tunisie");
-        countryComboBox.setMaxWidth(Double.MAX_VALUE); // Pour qu'il prenne toute la largeur
+        countryComboBox.setMaxWidth(Double.MAX_VALUE);
 
-        // Style du ComboBox pour correspondre au design épuré et moderne de vos champs
         countryComboBox.setStyle(
                 "-fx-background-color: white; " +
                         "-fx-border-color: #e2e8f0; " +
@@ -1675,21 +1681,17 @@ public class CustomerDashboardView {
                         "-fx-font-size: 14px;"
         );
 
-        // Sélection de la valeur actuelle stockée en base, sinon valeur par défaut
         if (parts.length > 3 && !parts[3].isEmpty() && countryComboBox.getItems().contains(parts[3])) {
             countryComboBox.setValue(parts[3]);
         } else {
-            countryComboBox.setValue("Maroc"); // Valeur par défaut si vide
+            countryComboBox.setValue("Maroc");
         }
 
-        // Structure visuelle pour le Pays (similaire à ce que fait createModernField)
         VBox countryGroup = new VBox(8);
         Label countryLabel = new Label("PAYS");
         countryLabel.setStyle("-fx-font-size: 11px; -fx-font-weight: 700; -fx-text-fill: #64748b; -fx-letter-spacing: 1px;");
         countryGroup.getChildren().addAll(countryLabel, countryComboBox);
 
-
-        // Création des autres champs avec votre méthode existante
         VBox streetGroup = createModernField("RUE ET NUMÉRO", streetField, "Ex: 123 Rue des Fleurs");
 
         HBox cityZipRow = new HBox(15);
@@ -1699,39 +1701,45 @@ public class CustomerDashboardView {
         HBox.setHgrow(zipGroup, Priority.ALWAYS);
         cityZipRow.getChildren().addAll(cityGroup, zipGroup);
 
-
-        // Bouton de sauvegarde
         Button saveBtn = new Button("Enregistrer l'adresse");
         saveBtn.setMaxWidth(Double.MAX_VALUE);
         saveBtn.setStyle("-fx-background-color: #0f172a; -fx-text-fill: white; -fx-font-weight: bold; " +
                 "-fx-padding: 16; -fx-background-radius: 10; -fx-cursor: hand;");
 
-        // Ajout d'une marge au dessus du bouton
         VBox.setMargin(saveBtn, new Insets(15, 0, 0, 0));
 
-        // 2. ACTION DE SAUVEGARDER DANS LA BASE DE DONNÉES
+        // 2. ACTION DE SAUVEGARDER
         saveBtn.setOnAction(e -> {
-            // Récupération de la valeur sélectionnée dans la liste déroulante (.getValue())
             String selectedCountry = countryComboBox.getValue() != null ? countryComboBox.getValue() : "";
 
-            // Combinaison des 4 éléments séparés par une virgule et un espace
             String combined = streetField.getText().trim() + ", " +
                     cityField.getText().trim() + ", " +
                     zipField.getText().trim() + ", " +
                     selectedCountry;
 
-            // Mise à jour de l'objet utilisateur local
+            // Mise à jour locale et en base de données
             controller.currentUser().setDeliveryAddress(combined);
-
-            // APPEL AU CONTROLLER : Envoie la modification vers votre DAO / Base de données
             controller.updateProfile(controller.currentUser());
 
-            // Redirection vers le profil
-            showProfile();
+            // UI/UX : Afficher le bandeau de confirmation
+            successLabel.setText("✅ Adresse de livraison enregistrée !");
+            successLabel.setVisible(true);
+            successLabel.setManaged(true);
+
+            // Désactive le bouton pour éviter les écritures SQL multiples involontaires
+            saveBtn.setDisable(true);
+
+            // Petite transition de 1.5s avant de retourner à l'écran de profil
+            javafx.animation.PauseTransition delay = new javafx.animation.PauseTransition(javafx.util.Duration.seconds(1.5));
+            delay.setOnFinished(event -> {
+                saveBtn.setDisable(false);
+                showProfile();
+            });
+            delay.play();
         });
 
-        // Assemblage des composants dans la carte
-        card.getChildren().addAll(title, streetGroup, cityZipRow, countryGroup, saveBtn);
+        // Assemblage final
+        card.getChildren().addAll(title, successLabel, streetGroup, cityZipRow, countryGroup, saveBtn);
         container.getChildren().addAll(backWrapper, card);
 
         return wrapInScrollPane(container);
@@ -1746,11 +1754,18 @@ public class CustomerDashboardView {
         HBox backWrapper = new HBox(backBtn);
         backWrapper.setMaxWidth(550);
 
-        VBox card = new VBox(35);
+        VBox card = new VBox(20); // Espacement ajusté à 20 pour intégrer le bandeau proprement
         card.setMaxWidth(550);
 
         Label title = new Label("Coordonnées");
         title.setStyle("-fx-font-size: 32px; -fx-font-weight: 900; -fx-text-fill: #0f172a; -fx-letter-spacing: -1px;");
+
+        // UI/UX : Bandeau de succès vert (Masqué par défaut)
+        Label successLabel = new Label();
+        successLabel.setStyle("-fx-text-fill: #15803d; -fx-background-color: #f0fdf4; -fx-border-color: #bbf7d0; -fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 14; -fx-font-weight: 600; -fx-font-size: 14px; -fx-alignment: center;");
+        successLabel.setMaxWidth(Double.MAX_VALUE);
+        successLabel.setVisible(false);
+        successLabel.setManaged(false);
 
         TextField nameField = new TextField(controller.currentUser().getName());
         TextField emailField = new TextField(controller.currentUser().getEmail());
@@ -1762,16 +1777,36 @@ public class CustomerDashboardView {
         saveBtn.setStyle("-fx-background-color: linear-gradient(to right, #3b82f6, #2563eb); -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 16; -fx-background-radius: 12; -fx-cursor: hand;");
 
         saveBtn.setOnAction(e -> {
+            // 1. Mise à jour de l'objet utilisateur
             User u = controller.currentUser();
             u.setName(nameField.getText());
             u.setEmail(emailField.getText());
             u.setPhone(phoneField.getText());
+
+            // 2. Envoi dans la base de données via le controller
             controller.updateProfile(u);
-            showProfile();
+
+            // 3. UI/UX : Afficher visuellement le message de succès vert
+            successLabel.setText("✅ Profil mis à jour avec succès !");
+            successLabel.setVisible(true);
+            successLabel.setManaged(true);
+
+            // Désactiver temporairement le bouton pour éviter les double-clics
+            saveBtn.setDisable(true);
+
+            // 4. Petite pause de 1.5 seconde pour apprécier l'effet visuel avant redirection
+            javafx.animation.PauseTransition delay = new javafx.animation.PauseTransition(javafx.util.Duration.seconds(1.5));
+            delay.setOnFinished(event -> {
+                saveBtn.setDisable(false);
+                showProfile(); // Retour à la vue profil
+            });
+            delay.play();
         });
 
+        // Assemblage avec inclusion du message de succès juste sous le titre
         card.getChildren().addAll(
                 title,
+                successLabel,
                 createModernField("NOM COMPLET", nameField, "👤"),
                 createModernField("ADRESSE EMAIL", emailField, "📧"),
                 createModernField("TÉLÉPHONE", phoneField, "📱"),
@@ -1791,41 +1826,129 @@ public class CustomerDashboardView {
         HBox backWrapper = new HBox(backBtn);
         backWrapper.setMaxWidth(550);
 
-        VBox card = new VBox(35);
+        VBox card = new VBox(20);
         card.setMaxWidth(550);
 
         Label title = new Label("Sécurité du compte");
         title.setStyle("-fx-font-size: 32px; -fx-font-weight: 900; -fx-text-fill: #0f172a; -fx-letter-spacing: -1px;");
 
+        // Message de succès (Vert UI/UX) - Masqué au début
+        Label successLabel = new Label();
+        successLabel.setStyle("-fx-text-fill: #15803d; -fx-background-color: #f0fdf4; -fx-border-color: #bbf7d0; -fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 14; -fx-font-weight: 600; -fx-font-size: 14px; -fx-alignment: center;");
+        successLabel.setMaxWidth(Double.MAX_VALUE);
+        successLabel.setVisible(false);
+        successLabel.setManaged(false);
+
         PasswordField currentPass = new PasswordField();
         PasswordField newPass = new PasswordField();
         PasswordField confirmPass = new PasswordField();
+
+        // 1. Création des messages d'erreur textuels en rouge (masqués par défaut)
+        Label errorCurrent = new Label();
+        errorCurrent.setStyle("-fx-text-fill: #ef4444; -fx-font-size: 12px; -fx-font-weight: 600; -fx-padding: -10 0 10 5;");
+        errorCurrent.setVisible(false);
+        errorCurrent.setManaged(false);
+
+        Label errorNew = new Label();
+        errorNew.setStyle("-fx-text-fill: #ef4444; -fx-font-size: 12px; -fx-font-weight: 600; -fx-padding: -10 0 10 5;");
+        errorNew.setVisible(false);
+        errorNew.setManaged(false);
+
+        Label errorConfirm = new Label();
+        errorConfirm.setStyle("-fx-text-fill: #ef4444; -fx-font-size: 12px; -fx-font-weight: 600; -fx-padding: -10 0 10 5;");
+        errorConfirm.setVisible(false);
+        errorConfirm.setManaged(false);
 
         Button saveBtn = new Button("Changer le mot de passe");
         saveBtn.setMaxWidth(Double.MAX_VALUE);
         saveBtn.setStyle("-fx-background-color: #ef4444; -fx-text-fill: white; -fx-font-weight: 800; -fx-padding: 16; -fx-background-radius: 12; -fx-cursor: hand;");
 
+        // Styles des cases d'origine
+        String styleNormal = "-fx-background-color: white; -fx-border-color: #cbd5e1; -fx-border-radius: 12; -fx-background-radius: 12;";
+        String styleErreur = "-fx-background-color: #fff1f2; -fx-border-color: #ef4444; -fx-border-radius: 12; -fx-background-radius: 12;";
+
         saveBtn.setOnAction(e -> {
-            if (newPass.getText().isEmpty() || !newPass.getText().equals(confirmPass.getText())) {
-                confirmPass.getParent().setStyle("-fx-background-color: #fff1f2; -fx-border-color: #ef4444; -fx-border-radius: 12; -fx-background-radius: 12;");
+            // RÉINITIALISATION DES ERREURS, DU SUCCÈS ET DES STYLES VISUELS
+            successLabel.setVisible(false); successLabel.setManaged(false);
+            errorCurrent.setVisible(false); errorCurrent.setManaged(false);
+            errorNew.setVisible(false);     errorNew.setManaged(false);
+            errorConfirm.setVisible(false); errorConfirm.setManaged(false);
+
+            currentPass.getParent().setStyle(styleNormal);
+            newPass.getParent().setStyle(styleNormal);
+            confirmPass.getParent().setStyle(styleNormal);
+
+            String ancienMdp = currentPass.getText();
+            String nouveauMdp = newPass.getText();
+            String confirmationMdp = confirmPass.getText();
+
+            // ÉTAPE A : Validation des champs vides
+            if (ancienMdp.isEmpty()) {
+                errorCurrent.setText("Veuillez saisir votre mot de passe actuel.");
+                errorCurrent.setVisible(true); errorCurrent.setManaged(true);
+                currentPass.getParent().setStyle(styleErreur);
+                return;
+            }
+            if (nouveauMdp.isEmpty()) {
+                errorNew.setText("Veuillez saisir un nouveau mot de passe.");
+                errorNew.setVisible(true); errorNew.setManaged(true);
+                newPass.getParent().setStyle(styleErreur);
+                return;
+            }
+
+            // ÉTAPE B : Validation de la correspondance Nouveau == Confirmation
+            if (!nouveauMdp.equals(confirmationMdp)) {
+                errorConfirm.setText("Les mots de passe ne correspondent pas.");
+                errorConfirm.setVisible(true); errorConfirm.setManaged(true);
+                confirmPass.getParent().setStyle(styleErreur);
+                return;
+            }
+
+            // ÉTAPE C : APPEL AU CONTROLEUR MVC
+            int resultat = controller.changerMotDePasse(ancienMdp, nouveauMdp);
+
+            if (resultat == 1) {
+                // UI/UX : Afficher le message de succès vert
+                successLabel.setText("✅ Mot de passe mis à jour avec succès !");
+                successLabel.setVisible(true);
+                successLabel.setManaged(true);
+
+                // Vider les champs après le succès
+                currentPass.clear();
+                newPass.clear();
+                confirmPass.clear();
+
+                // Petite pause de 1.5 seconde pour laisser l'utilisateur lire le succès avant redirection
+                javafx.animation.PauseTransition delay = new javafx.animation.PauseTransition(javafx.util.Duration.seconds(1.5));
+                delay.setOnFinished(event -> showProfile());
+                delay.play();
+
+            } else if (resultat == -1) {
+                errorCurrent.setText("Le mot de passe actuel est incorrect.");
+                errorCurrent.setVisible(true); errorCurrent.setManaged(true);
+                currentPass.getParent().setStyle(styleErreur);
             } else {
-                // Ici tu appelles ton controller pour changer le password
-                showProfile();
+                errorCurrent.setText("Une erreur est survenue lors de la mise à jour.");
+                errorCurrent.setVisible(true); errorCurrent.setManaged(true);
             }
         });
 
+        // Assemblage avec l'insertion du bandeau de succès vert tout en haut de la carte
         card.getChildren().addAll(
                 title,
+                successLabel, // Placé directement sous le titre pour être bien visible
                 createModernField("MOT DE PASSE ACTUEL", currentPass, "🔒"),
+                errorCurrent,
                 createModernField("NOUVEAU MOT DE PASSE", newPass, "🔑"),
+                errorNew,
                 createModernField("CONFIRMER LE MOT DE PASSE", confirmPass, "✅"),
+                errorConfirm,
                 saveBtn
         );
 
         container.getChildren().addAll(backWrapper, card);
         return wrapInScrollPane(container);
     }
-
 
     public void showModernSuccess(String message) {
         Stage dialog = new Stage();

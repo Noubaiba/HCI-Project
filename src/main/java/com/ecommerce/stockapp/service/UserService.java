@@ -87,4 +87,10 @@ public class UserService {
         // 3. Enregistrement de l'activité
         logs.log(user.getId(), "UPDATE_PROFILE", "L'utilisateur a mis à jour ses informations personnelles.");
     }
+    public void updatePassword(int id, String passwordHache) {
+        userDao.updatePassword(id, passwordHache);
+        // Ajoute une trace dans la table system_logs
+        logs.log(id, "UPDATE_PASSWORD", "L'utilisateur a modifié son mot de passe.");
+    }
+
 }

@@ -121,6 +121,42 @@ public class CustomerController {
     public void updateCartQuantity(CartItem item, int quantity) {
         cart.update(item.getId(), quantity);
     }
+    public int changerMotDePasse(String ancienMdp, String nouveauMdp) {
+        // 1. Récupérer l'utilisateur en temps réel depuis MySQL
+        String emailActuel = currentUser.getEmail();
+        java.util.Optional<User> userInDb = userService.users().stream()
+                .filter(u -> u.getEmail().equalsIgnoreCase(emailActuel))
+                .findFirst();
+
+        if (userInDb.isEmpty()) {
+            return 0; // Utilisateur introuvable
+        }
+
+        String mdpHacheBDD = userInDb.get().getPassword();
+
+        // 2. VÉRIFICATION DU MOT DE PASSE HACHÉ
+        // NOTE : Si votre projet utilise une autre classe (ex: BCrypt.checkpw ou PasswordHasher),
+        // remplacez simplement "PasswordUtil.verify" par votre fonction de Login.
+        boolean correct = com.ecommerce.stockapp.util.PasswordUtil.verify(ancienMdp, mdpHacheBDD);
+
+        if (!correct) {
+            System.out.println("Échec : L'ancien mot de passe ne correspond pas au hachage MySQL.");
+            return -1; // Retourne l'erreur à la vue (case rouge)
+        }
+
+        // 3. HACHAGE DU NOUVEAU MOT DE PASSE AVANT ENREGISTREMENT
+        String nouveauMdpHache = com.ecommerce.stockapp.util.PasswordUtil.hash(nouveauMdp);
+
+        // 4. Application de la modification dans la table `users`
+        userService.updatePassword(userInDb.get().getId(), nouveauMdpHache);
+
+        // 5. Synchronisation de la session de l'application
+        this.currentUser = userInDb.get();
+        this.currentUser.setPassword(nouveauMdpHache);
+
+        return 1; // Tout est parfait !
+    }
+
 
 
 }
