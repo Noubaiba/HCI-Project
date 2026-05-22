@@ -95,36 +95,21 @@ public class StockManagerDashboardView {
         navBox.getChildren().addAll(
                 navButton(IconFactory.box(),   "Products",      this::showProducts),
                 navButton(IconFactory.log(),   "Low Stock",     this::showLowStock),
-                navButton(IconFactory.chart(), "Stock History", this::showHistory)
+                navButton(IconFactory.chart(), "Stock History", this::showHistory),
+                navButton(IconFactory.profileIcon(), "Profile", this::showProfile)
         );
 
         VBox top = new VBox(12, menuPill, logoBlock);
         top.setAlignment(Pos.TOP_LEFT);
 
-        // Profile + logout at bottom
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
-
-        Button logout = new Button("Log out");
-        logout.getStyleClass().add("shell-logout-button");
-        logout.setMaxWidth(Double.MAX_VALUE);
-        logout.setOnAction(e -> controller.logout());
-
-        Label profileName = new Label(controller.currentUser().getName());
-        profileName.getStyleClass().add("shell-profile-name");
-        Label profileRole = new Label("Stock Manager");
-        profileRole.getStyleClass().add("shell-profile-email");
-        VBox profileInfo = new VBox(2, profileName, profileRole);
-
-        HBox profileRow = new HBox(10, profileInfo);
-        profileRow.setAlignment(Pos.CENTER_LEFT);
-        profileRow.setMaxWidth(Double.MAX_VALUE);
-        HBox.setHgrow(profileInfo, Priority.ALWAYS);
-
-        VBox profile = new VBox(10, profileRow, logout);
-        profile.getStyleClass().add("shell-profile");
-
-        if (!collapsibleNodes.contains(profileRow)) collapsibleNodes.add(profileRow);
+        VBox profile = SidebarProfileFactory.create(
+                controller.currentUser(),
+                this::showProfile,
+                controller::logout
+        );
+        collapsibleNodes.add(profile);
 
         sidebar.getChildren().addAll(top, navBox, spacer, profile);
         return sidebar;
@@ -136,7 +121,7 @@ public class StockManagerDashboardView {
     private VBox brandBlock() {
         ImageView logoImage = new ImageView();
         try {
-            var res = getClass().getResource("/images/stockify.png");
+            var res = getClass().getResource("/images/Stockify.png");
             if (res != null) logoImage.setImage(new Image(res.toExternalForm()));
         } catch (Exception ignored) {}
         logoImage.setFitWidth(45);
@@ -404,6 +389,224 @@ public class StockManagerDashboardView {
         );
         body.getStyleClass().add("dash-body");
         setContent("Stock History", body);
+    }
+
+    private void showProfile() {
+        selectNav("Profile");
+        User user = controller.currentUser();
+
+        StackPane avatar = new StackPane(new Label(initials(user.getName())));
+        avatar.getStyleClass().add("role-profile-avatar");
+
+        Label name = new Label(value(user.getName()).toUpperCase());
+        name.getStyleClass().add("role-profile-hero-name");
+        Label email = new Label(value(user.getEmail()));
+        email.getStyleClass().add("role-profile-hero-email");
+        Label badge = new Label("STOCK MANAGER");
+        badge.getStyleClass().add("role-profile-badge");
+
+        VBox identity = new VBox(8, name, email, badge);
+        HBox hero = new HBox(34, avatar, identity);
+        hero.setAlignment(Pos.CENTER_LEFT);
+        hero.setPadding(new Insets(58, 54, 48, 54));
+
+        VBox rows = new VBox(16,
+                profileMenuRow("Contact & Support", "Modifier le nom et le telephone", "C",
+                        () -> setContent("CONTACT", createContactProfilePage())),
+                profileMenuRow("Adresse", profileSubtitle(user.getDeliveryAddress(), "Aucune adresse definie"), "A",
+                        () -> setContent("ADRESSE", createAddressProfilePage())),
+                profileMenuRow("Securite du compte", "Compte magasinier actif et protege", "S",
+                        () -> setContent("SECURITE", createSecurityProfilePage()))
+        );
+        rows.setPadding(new Insets(0, 54, 54, 54));
+
+        VBox card = new VBox(0, hero, rows);
+        card.getStyleClass().add("role-profile-main-card");
+        card.setMaxWidth(980);
+
+        VBox body = new VBox(card);
+        body.setAlignment(Pos.TOP_CENTER);
+        body.setPadding(new Insets(12, 0, 40, 0));
+        setContent("VOTRE PROFIL", body);
+    }
+
+    private HBox profileMenuRow(String title, String subtitle, String iconText, Runnable action) {
+        Label icon = new Label(iconText);
+        icon.getStyleClass().add("role-profile-row-icon");
+
+        Label titleLabel = new Label(title);
+        titleLabel.getStyleClass().add("role-profile-row-title");
+        Label subtitleLabel = new Label(subtitle);
+        subtitleLabel.getStyleClass().add("role-profile-row-subtitle");
+        VBox texts = new VBox(4, titleLabel, subtitleLabel);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Label arrow = new Label("->");
+        arrow.getStyleClass().add("role-profile-row-arrow");
+
+        HBox row = new HBox(24, icon, texts, spacer, arrow);
+        row.getStyleClass().add("role-profile-menu-row");
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.setOnMouseClicked(e -> action.run());
+        return row;
+    }
+
+    private Node createContactProfilePage() {
+        User user = controller.currentUser();
+        TextField name = profileInput(value(user.getName()), "Nom complet");
+        TextField email = profileInput(value(user.getEmail()), "Email");
+        email.setEditable(false);
+        TextField phone = profileInput(value(user.getPhone()), "+212 600 000 000");
+
+        Button save = Ui.primary("Mettre a jour le profil");
+        save.getStyleClass().add("role-profile-wide-save");
+        save.setOnAction(e -> saveProfile(name.getText(), phone.getText(), user.getDeliveryAddress(), "Profil mis a jour."));
+
+        return profileFormPage("Coordonnees",
+                profileBackButton(this::showProfile),
+                profileField("NOM COMPLET", name),
+                profileField("ADRESSE EMAIL", email),
+                profileField("TELEPHONE", phone),
+                save);
+    }
+
+    private Node createAddressProfilePage() {
+        User user = controller.currentUser();
+        TextArea address = new TextArea(value(user.getDeliveryAddress()));
+        address.setPromptText("Adresse de depot, bureau ou contact");
+        address.setPrefRowCount(5);
+        address.setWrapText(true);
+        address.getStyleClass().add("role-profile-area");
+
+        Button save = Ui.primary("Enregistrer l'adresse");
+        save.getStyleClass().add("role-profile-wide-save");
+        save.setOnAction(e -> saveProfile(user.getName(), user.getPhone(), address.getText(), "Adresse mise a jour."));
+
+        return profileFormPage("Adresse",
+                profileBackButton(this::showProfile),
+                profileField("ADRESSE", address),
+                save);
+    }
+
+    private Node createSecurityProfilePage() {
+        PasswordField currentPass = new PasswordField();
+        PasswordField newPass = new PasswordField();
+        PasswordField confirmPass = new PasswordField();
+
+        Label success = profileFeedback("role-profile-success");
+        Label errorCurrent = profileError();
+        Label errorNew = profileError();
+        Label errorConfirm = profileError();
+
+        VBox currentBox = profileField("MOT DE PASSE ACTUEL", currentPass);
+        VBox newBox = profileField("NOUVEAU MOT DE PASSE", newPass);
+        VBox confirmBox = profileField("CONFIRMER LE MOT DE PASSE", confirmPass);
+
+        Button save = new Button("Changer le mot de passe");
+        save.getStyleClass().add("role-profile-password-save");
+        save.setMaxWidth(Double.MAX_VALUE);
+        save.setOnAction(e -> {
+            resetSecurityFeedback(success, errorCurrent, errorNew, errorConfirm, currentBox, newBox, confirmBox);
+
+            String oldPassword = currentPass.getText();
+            String newPassword = newPass.getText();
+            String confirmation = confirmPass.getText();
+
+            if (oldPassword == null || oldPassword.isBlank()) {
+                showFieldError(errorCurrent, currentBox, "Veuillez saisir votre mot de passe actuel.");
+                return;
+            }
+            if (newPassword == null || newPassword.isBlank()) {
+                showFieldError(errorNew, newBox, "Veuillez saisir un nouveau mot de passe.");
+                return;
+            }
+            if (!newPassword.equals(confirmation)) {
+                showFieldError(errorConfirm, confirmBox, "Les mots de passe ne correspondent pas.");
+                return;
+            }
+
+            int result = controller.changerMotDePasse(oldPassword, newPassword);
+            if (result == 1) {
+                success.setText("Mot de passe mis a jour avec succes !");
+                success.setVisible(true);
+                success.setManaged(true);
+                currentPass.clear();
+                newPass.clear();
+                confirmPass.clear();
+                javafx.animation.PauseTransition delay = new javafx.animation.PauseTransition(javafx.util.Duration.seconds(1.5));
+                delay.setOnFinished(event -> showProfile());
+                delay.play();
+            } else if (result == -1) {
+                showFieldError(errorCurrent, currentBox, "Le mot de passe actuel est incorrect.");
+            } else {
+                showFieldError(errorCurrent, currentBox, "Une erreur est survenue lors de la mise a jour.");
+            }
+        });
+
+        return profileFormPage("Securite du compte",
+                profileBackButton(this::showProfile),
+                success,
+                currentBox,
+                errorCurrent,
+                newBox,
+                errorNew,
+                confirmBox,
+                errorConfirm,
+                save);
+    }
+
+    private VBox profileFormPage(String title, Node... children) {
+        Label pageTitle = new Label(title);
+        pageTitle.getStyleClass().add("role-profile-form-title");
+
+        VBox form = new VBox(22);
+        if (children.length > 0) {
+            form.getChildren().add(children[0]);
+        }
+        form.getChildren().add(pageTitle);
+        for (int i = 1; i < children.length; i++) {
+            form.getChildren().add(children[i]);
+        }
+        form.setMaxWidth(660);
+
+        VBox page = new VBox(30, form);
+        page.setAlignment(Pos.TOP_CENTER);
+        page.setPadding(new Insets(54, 0, 70, 0));
+        page.setStyle("-fx-background-color: white;");
+        return page;
+    }
+
+    private Button profileBackButton(Runnable action) {
+        Button back = new Button("<-");
+        back.getStyleClass().add("role-profile-back");
+        back.setOnAction(e -> action.run());
+        return back;
+    }
+
+    private TextField profileInput(String value, String prompt) {
+        TextField field = Ui.text(prompt);
+        field.setText(value(value));
+        return field;
+    }
+
+    private void saveProfile(String name, String phone, String address, String message) {
+        if (name == null || name.trim().isEmpty()) {
+            Ui.error(new IllegalArgumentException("Name is required."));
+            return;
+        }
+        User user = controller.currentUser();
+        user.setName(name.trim());
+        user.setPhone(phone == null ? null : phone.trim());
+        user.setDeliveryAddress(address == null ? null : address.trim());
+        try {
+            controller.updateProfile(user);
+            Ui.info("Profile", message);
+            showProfile();
+        } catch (RuntimeException ex) {
+            Ui.error(ex);
+        }
     }
 
     // =========================================================
@@ -864,6 +1067,83 @@ public class StockManagerDashboardView {
         String[] parts = name.trim().split("\\s+");
         if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
         return (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1)).toUpperCase();
+    }
+
+    private VBox profileField(String labelText, Node field) {
+        Label label = new Label(labelText);
+        label.getStyleClass().add("role-profile-label");
+        if (field instanceof Region region) {
+            region.setMaxWidth(Double.MAX_VALUE);
+            region.getStyleClass().add("role-profile-input");
+        }
+        return new VBox(8, label, field);
+    }
+
+    private Label profileFeedback(String styleClass) {
+        Label label = new Label();
+        label.getStyleClass().add(styleClass);
+        label.setMaxWidth(Double.MAX_VALUE);
+        label.setVisible(false);
+        label.setManaged(false);
+        return label;
+    }
+
+    private Label profileError() {
+        return profileFeedback("role-profile-error");
+    }
+
+    private void resetSecurityFeedback(Label success, Label errorCurrent, Label errorNew, Label errorConfirm,
+                                       VBox currentBox, VBox newBox, VBox confirmBox) {
+        success.setVisible(false);
+        success.setManaged(false);
+        errorCurrent.setVisible(false);
+        errorCurrent.setManaged(false);
+        errorNew.setVisible(false);
+        errorNew.setManaged(false);
+        errorConfirm.setVisible(false);
+        errorConfirm.setManaged(false);
+        currentBox.getStyleClass().remove("role-profile-field-error");
+        newBox.getStyleClass().remove("role-profile-field-error");
+        confirmBox.getStyleClass().remove("role-profile-field-error");
+    }
+
+    private void showFieldError(Label label, VBox fieldBox, String message) {
+        label.setText(message);
+        label.setVisible(true);
+        label.setManaged(true);
+        if (!fieldBox.getStyleClass().contains("role-profile-field-error")) {
+            fieldBox.getStyleClass().add("role-profile-field-error");
+        }
+    }
+
+    private TextField profileReadonly(String value) {
+        TextField field = new TextField(value(value));
+        field.setEditable(false);
+        field.setFocusTraversable(false);
+        field.getStyleClass().add("role-profile-readonly");
+        return field;
+    }
+
+    private VBox profileFact(String label, String value) {
+        Label l = new Label(label);
+        l.getStyleClass().add("role-profile-fact-label");
+        Label v = new Label(value(value));
+        v.getStyleClass().add("role-profile-fact-value");
+        return new VBox(2, l, v);
+    }
+
+    private Label profileChip(String text) {
+        Label chip = new Label(text);
+        chip.getStyleClass().add("role-profile-chip");
+        return chip;
+    }
+
+    private String value(String text) {
+        return text == null ? "" : text;
+    }
+
+    private String profileSubtitle(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
     }
 
     // =========================================================

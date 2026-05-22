@@ -10,6 +10,9 @@ CREATE TABLE users (
     role ENUM('ADMIN', 'CUSTOMER', 'STOCK_MANAGER') NOT NULL,
     status ENUM('ACTIVE', 'INACTIVE', 'BLOCKED') NOT NULL DEFAULT 'ACTIVE',
     activation_token VARCHAR(120) UNIQUE,
+    phone VARCHAR(40),
+    delivery_address VARCHAR(255),
+    profile_picture VARCHAR(500),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -93,9 +96,9 @@ CREATE TABLE system_logs (
         ON UPDATE CASCADE ON DELETE SET NULL
 );
 
-INSERT INTO users(name, email, password, role, status, activation_token) VALUES
-('System Administrator', 'admin@shop.com', 'pbkdf2$120000$jAwWk81egd/Uewocrh7bQA==$ElQdobFhfymhsmU7eaxWsw/9UDL+GwsQDs0LYWZdKtk=', 'ADMIN', 'ACTIVE', NULL),
-('Demo Customer', 'customer@shop.com', 'pbkdf2$120000$5DHyXMouecKoWcq6aui1lg==$iP+KxCdjRj2I3l205YjvLsYQjkeRT5QAto124g26cSs=', 'CUSTOMER', 'ACTIVE', NULL);
+INSERT INTO users(name, email, password, role, status, activation_token, phone, delivery_address, profile_picture) VALUES
+('System Administrator', 'admin@shop.com', 'pbkdf2$120000$jAwWk81egd/Uewocrh7bQA==$ElQdobFhfymhsmU7eaxWsw/9UDL+GwsQDs0LYWZdKtk=', 'ADMIN', 'ACTIVE', NULL, '+212 600 000 001', 'Stockify HQ, Casablanca, Morocco', NULL),
+('Demo Customer', 'customer@shop.com', 'pbkdf2$120000$5DHyXMouecKoWcq6aui1lg==$iP+KxCdjRj2I3l205YjvLsYQjkeRT5QAto124g26cSs=', 'CUSTOMER', 'ACTIVE', NULL, '+212 600 000 002', '12 Avenue Hassan II, Casablanca, Morocco', NULL);
 
 INSERT INTO categories(name) VALUES
 ('Electronics'),

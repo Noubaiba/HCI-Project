@@ -45,6 +45,22 @@ public class AdminController {
     public void updateUserStatus(User user, UserStatus status) { users.updateStatus(currentUser.getId(), user, status); }
     public void updateRole(User user, Role role) { users.updateRole(currentUser.getId(), user, role); }
     public void updateOrderStatus(Order order, OrderStatus status) { orders.updateOrderStatus(currentUser.getId(), order, status); }
+    public void updateProfile(User user) { users.updateProfile(user); }
+    public int changerMotDePasse(String ancienMdp, String nouveauMdp) {
+        java.util.Optional<User> userInDb = users.users().stream()
+                .filter(u -> u.getEmail().equalsIgnoreCase(currentUser.getEmail()))
+                .findFirst();
+        if (userInDb.isEmpty()) {
+            return 0;
+        }
+        if (!com.ecommerce.stockapp.util.PasswordUtil.verify(ancienMdp, userInDb.get().getPassword())) {
+            return -1;
+        }
+        String hashed = com.ecommerce.stockapp.util.PasswordUtil.hash(nouveauMdp);
+        users.updatePassword(userInDb.get().getId(), hashed);
+        currentUser.setPassword(hashed);
+        return 1;
+    }
 
     public String createStockManager(String name, String email) throws MessagingException {
         return users.createStockManager(currentUser.getId(), name, email);

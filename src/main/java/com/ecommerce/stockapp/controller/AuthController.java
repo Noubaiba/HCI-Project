@@ -55,7 +55,7 @@ public class AuthController {
                 ).render());
 
                 case STOCK_MANAGER -> set(new StockManagerDashboardView(
-                        new StockManagerController(user, this, productService, stockService)
+                        new StockManagerController(user, this, productService, stockService, userService)
                 ).render());
 
                 case CUSTOMER -> {

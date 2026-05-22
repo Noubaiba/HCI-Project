@@ -66,8 +66,7 @@ public class AppShell {
     private VBox sidebar;
     private Label logoText;
     private Label sectionTitle;
-    private HBox profile;
-    private Button logoutButton;
+    private VBox profile;
     private Button activeButton;
     private boolean collapsed;
     private String currentTitle = "Dashboard";
@@ -135,7 +134,7 @@ public class AppShell {
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
 
-        profile = profileBlock(); // Contient maintenant l'avatar, le texte et le logout
+        profile = SidebarProfileFactory.create(user, () -> triggerNav("Profile"), logout);
 
         // On ajoute seulement le profil à la fin
         sidebar.getChildren().addAll(menuPill, logoBlock, navBox, spacer, profile);
@@ -510,9 +509,6 @@ public class AppShell {
 
         profile.setVisible(!collapsed);
         profile.setManaged(!collapsed);
-
-        logoutButton.setVisible(!collapsed);
-        logoutButton.setManaged(!collapsed);
 
         for (javafx.scene.Node node : collapsibleNodes) {
             node.setVisible(!collapsed);
