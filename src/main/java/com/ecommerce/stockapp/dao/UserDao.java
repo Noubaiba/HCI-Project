@@ -152,4 +152,16 @@ public class UserDao {
                 rs.getString("profile_picture")
         );
     }
+    public void updatePassword(int id, String passwordHache) {
+        String sql = "UPDATE users SET password = ? WHERE id = ?";
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, passwordHache);
+            statement.setInt(2, id);
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new DaoException("Impossible de mettre à jour le mot de passe dans la table users", e);
+        }
+    }
+
 }
