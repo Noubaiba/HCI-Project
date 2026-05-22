@@ -26,6 +26,34 @@ import javafx.scene.control.MenuItem;
 import javafx.geometry.Side;
 import javafx.scene.control.CustomMenuItem;
 
+import javafx.scene.control.Alert;
+import javafx.scene.Cursor;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.ContextMenu;
+
+import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.Dialog;
+
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.*;
+import javafx.stage.Popup;
+import javafx.scene.paint.Color;
+import javafx.stage.StageStyle;
+
+import javafx.scene.control.CustomMenuItem;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.SeparatorMenuItem;
+import javafx.geometry.Side;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.Button;
+
 public class AppShell {
 
     private final User user;
@@ -275,7 +303,6 @@ public class AppShell {
             }
         }
     }
-
     private HBox profileBlock() {
         StackPane avatar = Ui.avatar(user.getName());
 
@@ -289,42 +316,122 @@ public class AppShell {
         text.setAlignment(Pos.CENTER_LEFT);
 
         Label arrow = new Label("⌵");
-        arrow.setStyle("-fx-text-fill: #64748b; -fx-font-size: 18px; -fx-font-weight: bold;");
+        arrow.setStyle("-fx-text-fill: #64748b; -fx-font-size: 16px;");
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        // --- LE MENU LOGOUT (BULLE BLANCHE) ---
-        ContextMenu logoutMenu = new ContextMenu();
-        logoutMenu.getStyleClass().add("modern-logout-menu");
-
-        Label logoutLabel = new Label("Logout");
-        // ON UTILISE UNE CLASSE SPÉCIFIQUE POUR LE ROUGE
-        logoutLabel.getStyleClass().add("logout-item-text-red");
-        logoutLabel.setMaxWidth(Double.MAX_VALUE);
-        logoutLabel.setAlignment(Pos.CENTER);
-
-        CustomMenuItem logoutItem = new CustomMenuItem(logoutLabel);
-        logoutItem.setHideOnClick(true);
-        logoutItem.setOnAction(e -> logout.run());
-
-        logoutMenu.getItems().add(logoutItem);
-
-        // Compatibilité
-        logoutButton = new Button("Logout");
-        logoutButton.setVisible(false);
-        logoutButton.setManaged(false);
-
         HBox profileContainer = new HBox(12, avatar, text, spacer, arrow);
         profileContainer.getStyleClass().add("shell-profile");
-        profileContainer.setCursor(javafx.scene.Cursor.HAND);
+        profileContainer.setCursor(Cursor.HAND);
 
-        profileContainer.setOnMouseClicked(e -> {
-            // Affichage au-dessus du bloc profil
-            logoutMenu.show(profileContainer, javafx.geometry.Side.TOP, 0, -10);
+        // --- CONTEXT MENU MODERNE ---
+        ContextMenu menu = new ContextMenu();
+        menu.getStyleClass().add("stockify-profile-popup");
+
+        // 1. Mon Profil (Utilise l'icône de ton IconFactory)
+     // 1. Mon Profil (Utilise l'icône de ton IconFactory)
+        javafx.scene.shape.SVGPath pIcon = com.ecommerce.stockapp.util.IconFactory.profileIcon();
+        pIcon.setFill(javafx.scene.paint.Color.web("#475569"));
+        HBox pBox = new HBox(12, pIcon, new Label("My Profile"));
+        pBox.setAlignment(Pos.CENTER_LEFT);
+        pBox.setPadding(new Insets(8, 12, 8, 12));
+        CustomMenuItem profileItem = new CustomMenuItem(pBox);
+        profileItem.setHideOnClick(true);
+        
+        // 🔥 CORRIGÉ : On utilise la fonction native triggerNav déjà présente dans ton fichier !
+        profileItem.setOnAction(e -> triggerNav("Profile"));
+
+        // 2. Paramètres (Utilise l'icône box ou une autre icône existante comme indicateur)
+        javafx.scene.shape.SVGPath sIcon = com.ecommerce.stockapp.util.IconFactory.box();
+        sIcon.setFill(javafx.scene.paint.Color.web("#475569"));
+        HBox sBox = new HBox(12, sIcon, new Label("Settings"));
+        sBox.setAlignment(Pos.CENTER_LEFT);
+        sBox.setPadding(new Insets(8, 12, 8, 12));
+        CustomMenuItem settingsItem = new CustomMenuItem(sBox);
+        settingsItem.setHideOnClick(true);
+
+        // 3. Déconnexion (Icône personnalisée SVG pour la sortie)
+        javafx.scene.shape.SVGPath lIcon = new javafx.scene.shape.SVGPath();
+        lIcon.setContent("M16 17v-3H9v-4h7V7l5 5-5 5M14 2a2 2 0 0 0-2 2v2h2V4h6v16h-6v-2h-2v2a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-6z");
+        lIcon.setFill(javafx.scene.paint.Color.web("#ef4444")); // Couleur rouge alerte
+        
+        HBox lBox = new HBox(12, lIcon, new Label("Logout"));
+        lBox.setAlignment(Pos.CENTER_LEFT);
+        lBox.setPadding(new Insets(8, 12, 8, 12));
+        ((Label) lBox.getChildren().get(1)).setStyle("-fx-text-fill: #ef4444; -fx-font-weight: bold;");
+        CustomMenuItem logoutItem = new CustomMenuItem(lBox);
+        logoutItem.setHideOnClick(true);
+
+        // --- LOGIQUE DE L'ALERTE DE DÉCONNEXION CUSTOM (LOOK DESIGN CARD) ---
+        logoutItem.setOnAction(e -> {
+            Dialog<ButtonType> dialog = new Dialog<>();
+            dialog.initStyle(javafx.stage.StageStyle.UNDECORATED); // Supprime la barre Windows/Mac native
+
+            if (profileContainer.getScene() != null && profileContainer.getScene().getStylesheets() != null) {
+                dialog.getDialogPane().getStylesheets().addAll(profileContainer.getScene().getStylesheets());
+            }
+            dialog.getDialogPane().getStyleClass().add("stockify-custom-dialog");
+
+            // Conteneur de l'alerte
+            VBox dialogContent = new VBox(16);
+            dialogContent.setAlignment(Pos.CENTER);
+            dialogContent.setPadding(new Insets(24));
+            dialogContent.setPrefWidth(340);
+            dialogContent.setStyle("-fx-background-color: #ffffff; -fx-background-radius: 16; -fx-border-radius: 16; -fx-border-color: #e2e8f0; -fx-border-width: 1;");
+
+            // Une grande icône de déconnexion rouge en SVG pour l'alerte
+            javafx.scene.shape.SVGPath dialogAlertIcon = new javafx.scene.shape.SVGPath();
+            dialogAlertIcon.setContent("M16 17v-3H9v-4h7V7l5 5-5 5M14 2a2 2 0 0 0-2 2v2h2V4h6v16h-6v-2h-2v2a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-6z");
+            dialogAlertIcon.setFill(javafx.scene.paint.Color.web("#ef4444"));
+            // On l'agrandit un peu pour l'affichage de l'alerte
+            dialogAlertIcon.setScaleX(1.8);
+            dialogAlertIcon.setScaleY(1.8);
+            
+            Label title = new Label("Logout");
+            title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #1e293b;");
+            
+            Label message = new Label("Are you sure you want to logout?\nYou will be returned to the login screen.");
+            message.setWrapText(true);
+            message.setAlignment(Pos.CENTER);
+            message.setStyle("-fx-font-size: 13px; -fx-text-fill: #64748b; -fx-text-alignment: center;");
+
+            // Bouton d'annulation (Gris épuré)
+            Button btnCancel = new Button("Cancel");
+            btnCancel.setStyle("-fx-background-color: #f1f5f9; -fx-text-fill: #475569; -fx-font-weight: bold; -fx-padding: 10 20; -fx-background-radius: 8; -fx-cursor: hand;");
+            btnCancel.setOnAction(ev -> {
+            	dialog.setResult(ButtonType.CANCEL);
+                dialog.close();
+            });
+            
+            // Bouton de confirmation (Rouge flat design)
+            Button btnConfirm = new Button("Yes, Logout");
+            btnConfirm.setStyle("-fx-background-color: #ef4444; -fx-text-fill: #ffffff; -fx-font-weight: bold; -fx-padding: 10 20; -fx-background-radius: 8; -fx-cursor: hand;");
+            btnConfirm.setOnAction(ev -> {
+            	dialog.setResult(ButtonType.OK);
+                dialog.close();
+            });
+
+            HBox actions = new HBox(12, btnCancel, btnConfirm);
+            actions.setAlignment(Pos.CENTER);
+            actions.setPadding(new Insets(8, 0, 0, 0));
+
+            dialogContent.getChildren().addAll(dialogAlertIcon, title, message, actions);
+            dialog.getDialogPane().setContent(dialogContent);
+
+            dialog.showAndWait().ifPresent(res -> {
+                if (res == ButtonType.OK) {
+                    logout.run();
+                }
+            });
         });
 
-        collapsibleNodes.addAll(java.util.List.of(text, arrow));
+        menu.getItems().addAll(profileItem, settingsItem, new SeparatorMenuItem(), logoutItem);
+
+        // Déclencheur au clic (Affiche le menu juste au-dessus du bloc de profil)
+        profileContainer.setOnMouseClicked(e ->
+                menu.show(profileContainer, Side.TOP, 0, -10)
+        );
 
         return profileContainer;
     }

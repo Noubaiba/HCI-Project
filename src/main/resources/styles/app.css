@@ -2025,4 +2025,33 @@
     -fx-text-fill: #64748b;
 }
 
->>>>>>> 5288b89ba8282253ed214da567fe7ee889a36f6a
+/* Supprime l'habillage gris par défaut des dialogues JavaFX */
+.stockify-custom-dialog {
+    -fx-background-color: transparent;
+}
+.stockify-custom-dialog .dialog-pane {
+    -fx-background-color: transparent;
+    -fx-header-panel-background: transparent;
+    -fx-padding: 0;
+}
+
+/* Style général du menu popup */
+.stockify-profile-popup {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 12px;
+    -fx-border-radius: 12px;
+    -fx-border-color: #e2e8f0;
+    -fx-border-width: 1px;
+    -fx-padding: 4px;
+    -fx-effect: dropshadow(three-pass-box, rgba(15, 23, 42, 0.08), 15, 0, 0, 4);
+}
+
+.stockify-profile-popup .custom-menu-item:focused,
+.stockify-profile-popup .custom-menu-item:hover {
+    -fx-background-color: #f7f5f9;
+    -fx-background-radius: 8px;
+}
+.stockify-profile-popup .menu-item:focused .label,
+.stockify-profile-popup .menu-item:hover .label {
+    -fx-text-fill: #083f7c !important; /* 🟢 Écriture blanche pour un contraste parfait */
+}
