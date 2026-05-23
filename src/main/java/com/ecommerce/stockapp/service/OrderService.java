@@ -30,6 +30,10 @@ public class OrderService {
     public List<Order> userOrders(int userId) { return orderDao.findByUser(userId); }
 
     public void placeOrder(int userId) {
+        placeOrder(userId, OrderStatus.PAID);
+    }
+
+    public void placeOrder(int userId, OrderStatus status) {
         List<CartItem> items = cartDao.findByUser(userId);
         if (items.isEmpty()) {
             throw new IllegalArgumentException("Your cart is empty.");
@@ -39,7 +43,7 @@ public class OrderService {
         try (Connection connection = orderDao.getDatabase().getConnection()) {
             connection.setAutoCommit(false);
             try {
-                int orderId = orderDao.createOrder(connection, userId, total, OrderStatus.PAID);
+                int orderId = orderDao.createOrder(connection, userId, total, status);
                 for (CartItem item : items) {
                     Product product = productDao.findById(item.getProduct().getId()).orElseThrow();
                     if (product.getQuantity() < item.getQuantity()) {

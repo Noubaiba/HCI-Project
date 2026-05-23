@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paiement Stripe</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f9f9f9; }
+        #payment-form { max-width: 400px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        #payment-element { min-height: 200px; width: 100%; margin-bottom: 20px; }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #6366f1;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background: #4f46e5; }
+        button:disabled { opacity: 0.7; cursor: not-allowed; }
+        #error-message { color: red; margin-top: 10px; font-size: 14px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<form id="payment-form">
+    <div id="payment-element"></div>
+    <button id="submit">Payer maintenant</button>
+    <div id="error-message"></div>
+</form>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+    const clientSecret = params.get('secret');
+    const publishableKey = params.get('pk');
+    const submitButton = document.getElementById('submit');
+    const errorMessage = document.getElementById('error-message');
+    const stripe = publishableKey ? Stripe(publishableKey) : null;
+
+    if (!publishableKey) {
+        errorMessage.textContent = "Erreur : Cle publique Stripe manquante.";
+        submitButton.disabled = true;
+    } else if (!clientSecret) {
+        errorMessage.textContent = "Erreur : Client Secret manquant.";
+        submitButton.disabled = true;
+    } else {
+        const elements = stripe.elements({ clientSecret });
+        const paymentElement = elements.create('payment');
+        paymentElement.mount('#payment-element');
+
+        document.getElementById('payment-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            submitButton.disabled = true;
+            submitButton.textContent = "Validation du paiement...";
+            errorMessage.textContent = "";
+
+            const { error, paymentIntent } = await stripe.confirmPayment({
+                elements,
+                redirect: 'if_required'
+            });
+
+            if (error) {
+                errorMessage.textContent = error.message;
+                submitButton.disabled = false;
+                submitButton.textContent = "Payer maintenant";
+                return;
+            }
+
+            if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'processing')) {
+                submitButton.textContent = "Paiement reussi !";
+
+                try {
+                    if (window.appInterface) {
+                        window.appInterface.onPaymentSuccess();
+                    } else {
+                        throw new Error("appInterface indisponible");
+                    }
+                } catch (bridgeError) {
+                    console.error("Erreur pont Java:", bridgeError);
+                    try {
+                        alert("PAYMENT_SUCCESS");
+                    } catch (alertError) {
+                        console.error("Erreur alerte JavaFX:", alertError);
+                        errorMessage.textContent = "Paiement valide, mais la confirmation Java est introuvable.";
+                        submitButton.disabled = false;
+                        submitButton.textContent = "Payer maintenant";
+                    }
+                }
+                return;
+            }
+
+            errorMessage.textContent = "Le paiement n'a pas ete confirme. Veuillez reessayer.";
+            submitButton.disabled = false;
+            submitButton.textContent = "Payer maintenant";
+        });
+    }
+</script>
+</body>
+</html>

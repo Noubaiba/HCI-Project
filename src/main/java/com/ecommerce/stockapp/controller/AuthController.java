@@ -48,6 +48,7 @@ public class AuthController {
     public boolean login(String email, String password) {
         try {
             User user = authService.login(email, password);
+            PaymentService payementService=new PaymentService();
 
             switch (user.getRole()) {
                 case ADMIN -> set(new AdminDashboardView(
@@ -61,7 +62,7 @@ public class AuthController {
                 case CUSTOMER -> {
                     // 1. Création du Controller avec UserService pour ton profil
                     CustomerController controller = new CustomerController(
-                            user, this, productService, cartService, orderService, userService, null
+                            user, this, productService, cartService, orderService, userService, null,payementService
                     );
 
                     // 2. Création de la View (indispensable pour lier les actions de navigation)

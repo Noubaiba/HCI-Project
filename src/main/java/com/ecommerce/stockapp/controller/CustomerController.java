@@ -2,12 +2,10 @@ package com.ecommerce.stockapp.controller;
 
 import com.ecommerce.stockapp.model.CartItem;
 import com.ecommerce.stockapp.model.Order;
+import com.ecommerce.stockapp.model.OrderStatus;
 import com.ecommerce.stockapp.model.Product;
 import com.ecommerce.stockapp.model.User;
-import com.ecommerce.stockapp.service.CartService;
-import com.ecommerce.stockapp.service.OrderService;
-import com.ecommerce.stockapp.service.ProductService;
-import com.ecommerce.stockapp.service.UserService; // On utilise le service plutôt que le DAO direct
+import com.ecommerce.stockapp.service.*;
 import com.ecommerce.stockapp.view.AppShell;
 import com.ecommerce.stockapp.model.OrderItem;
 import javafx.scene.Node;
@@ -24,10 +22,13 @@ public class CustomerController {
     private final OrderService orders;
     private final UserService userService; // Utilisation du Service pour respecter l'architecture
     private AppShell appShell;
+    PaymentService paymentService;
+
+    // Dans CustomerController.java
 
     public CustomerController(User currentUser, AuthController auth, ProductService products,
                               CartService cart, OrderService orders, UserService userService,
-                              AppShell appShell) {
+                              AppShell appShell, PaymentService paymentService) { // <--- Ajout ici
         this.currentUser = currentUser;
         this.auth = auth;
         this.products = products;
@@ -35,6 +36,7 @@ public class CustomerController {
         this.orders = orders;
         this.userService = userService;
         this.appShell = appShell;
+        this.paymentService = paymentService; // <--- Initialisation ici
     }
     // Dans CustomerController.java
     public void navigateToCustomPage(String title, Node pageContent) {
@@ -53,6 +55,13 @@ public class CustomerController {
         // On met à jour l'utilisateur en mémoire pour l'affichage
         this.currentUser = user;
     }
+
+    public void updateDeliveryAddress(String deliveryAddress) {
+        currentUser.setDeliveryAddress(deliveryAddress);
+        userService.updateProfile(currentUser);
+    }
+
+
 
     public User currentUser() { return currentUser; }
 
@@ -91,6 +100,11 @@ public class CustomerController {
     // --- Gestion des Commandes ---
     public void placeOrder() {
         orders.placeOrder(currentUser.getId());
+        if (appShell != null) appShell.updateCartCount(0);
+    }
+
+    public void placeOrder(OrderStatus status) {
+        orders.placeOrder(currentUser.getId(), status);
         if (appShell != null) appShell.updateCartCount(0);
     }
 
@@ -155,6 +169,20 @@ public class CustomerController {
         this.currentUser.setPassword(nouveauMdpHache);
 
         return 1; // Tout est parfait !
+    }
+
+    public String getPaymentIntentSecret() {
+        try {
+            long amountInCents = cartTotal().multiply(new BigDecimal(100)).longValue();
+            return paymentService.createPaymentIntent(amountInCents);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public String getStripePublishableKey() {
+        return paymentService.getPublishableKey();
     }
 
 

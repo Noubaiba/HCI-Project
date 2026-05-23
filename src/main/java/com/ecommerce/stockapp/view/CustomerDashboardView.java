@@ -4,6 +4,7 @@ import com.ecommerce.stockapp.controller.CustomerController;
 import com.ecommerce.stockapp.model.CartItem;
 import com.ecommerce.stockapp.model.Order;
 import com.ecommerce.stockapp.model.Product;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
@@ -16,6 +17,8 @@ import javafx.scene.layout.*;
 import java.io.File;
 import java.math.BigDecimal;
 import java.util.List;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import com.ecommerce.stockapp.controller.CustomerController;
 import com.ecommerce.stockapp.model.CartItem;
 import com.ecommerce.stockapp.model.Order;
@@ -34,6 +37,8 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import java.util.Locale;
 import javafx.geometry.Pos;
+import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.Modality;
@@ -57,6 +62,7 @@ import com.ecommerce.stockapp.util.IconFactory;
 import com.ecommerce.stockapp.view.NavItem;
 import javafx.scene.Node;
 import javafx.scene.control.PasswordField; // Profites-en pour ajouter celui-ci aussi
+import netscape.javascript.JSObject;
 
 
 public class CustomerDashboardView {
@@ -719,37 +725,17 @@ public class CustomerDashboardView {
         cashMethodBox.setMaxWidth(Double.MAX_VALUE);
         paypalMethodBox.setMaxWidth(Double.MAX_VALUE);
 
-        // --- CHAMPS CARTE ---
-        TextField cardNumber = new TextField();
-        cardNumber.setPromptText("1234  5678  9012  3456");
-        TextField cardName = new TextField();
-        cardName.setPromptText("DOUNIA BENALI");
-        TextField expiry = new TextField();
-        expiry.setPromptText("MM / AA");
-
-        // CORRECTION SÉCURITÉ : Remplacement par un PasswordField pour masquer le code secret
-        PasswordField cvv = new PasswordField();
-        cvv.setPromptText("•••");
-
-        HBox expiryRow = new HBox(12);
-        VBox expiryGroup = createModernField("DATE D'EXPIRATION", expiry, "📅");
-        VBox cvvGroup = createModernField("CVV", cvv, "🔒");
-        HBox.setHgrow(expiryGroup, Priority.ALWAYS);
-        HBox.setHgrow(cvvGroup, Priority.ALWAYS);
-        expiryRow.getChildren().addAll(expiryGroup, cvvGroup);
-
-        VBox cardFields = new VBox(14,
-                createModernField("NUMÉRO DE CARTE", cardNumber, ""),
-                createModernField("NOM DU TITULAIRE", cardName, ""),
-                expiryRow
-        );
-        cardFields.setPadding(new Insets(8, 0, 0, 0));
+        Label cardInfo = new Label("Les informations de carte seront saisies dans la page de paiement securisee.");
+        cardInfo.setWrapText(true);
+        cardInfo.setStyle("-fx-font-size: 13px; -fx-text-fill: #64748b; -fx-background-color: #f8fafc; -fx-border-color: #e2e8f0; -fx-border-radius: 10; -fx-background-radius: 10; -fx-padding: 14;");
+        cardInfo.setVisible(true);
+        cardInfo.setManaged(true);
 
         // Afficher/cacher selon méthode
         group.selectedToggleProperty().addListener((obs, old, newVal) -> {
             Object data = ((Toggle) newVal).getUserData();
-            cardFields.setVisible("card".equals(data));
-            cardFields.setManaged("card".equals(data));
+            cardInfo.setVisible("card".equals(data));
+            cardInfo.setManaged("card".equals(data));
 
             // Mettre à jour le style visuel des cartes
             updateMethodCardStyle(cardMethodBox, "card".equals(data));
@@ -762,7 +748,7 @@ public class CustomerDashboardView {
         group.getToggles().get(1).setUserData("cash");
         group.getToggles().get(2).setUserData("paypal");
 
-        paymentBlock.getChildren().addAll(stepHeader1, methodGrid, cardFields);
+        paymentBlock.getChildren().addAll(stepHeader1, methodGrid, cardInfo);
 
         // ===== BLOC 2 : ADRESSE =====
         VBox addressBlock = new VBox(16);
@@ -963,42 +949,55 @@ public class CustomerDashboardView {
                 return;
             }
 
+            String deliveryAddress = String.join(", ",
+                    street.getText().trim(),
+                    city.getText().trim(),
+                    zip.getText().trim(),
+                    countryCombo.getValue().trim()
+            );
+
+            try {
+                if (!deliveryAddress.equals(controller.currentUser().getDeliveryAddress())) {
+                    controller.updateDeliveryAddress(deliveryAddress);
+                }
+            } catch (Exception ex) {
+                showModernError("Impossible d'enregistrer l'adresse de livraison. Veuillez réessayer.");
+                return;
+            }
+
             // Récupérer le mode de paiement choisi
             String selectedMethod = (String) group.getSelectedToggle().getUserData();
-
             if ("card".equals(selectedMethod)) {
-                String rawCard = cardNumber.getText().replace(" ", "");
-                String rawExpiry = expiry.getText().trim();
-                String rawCvv = cvv.getText().trim();
-
-                // Validation locale de surface de la carte bancaire
-                if (rawCard.length() < 16 || rawExpiry.length() < 5 || rawCvv.length() < 3) {
-                    showModernError("Les informations de la carte bancaire semblent invalides.");
+                // 1. Appel au contrôleur pour obtenir le clientSecret de Stripe
+                String clientSecret = controller.getPaymentIntentSecret();
+                if (clientSecret == null || clientSecret.isBlank()) {
+                    showModernError("Impossible d'initialiser le paiement par carte. Veuillez réessayer.");
                     return;
                 }
 
-                // On exécute la commande via le contrôleur
-                run(controller::placeOrder);
-
-                // SÉCURITÉ : Nettoyage immédiat des données de carte en RAM
-                cardNumber.clear();
-                cardName.clear();
-                expiry.clear();
-                cvv.clear();
+                // 2. Ouvrir la fenêtre de paiement (Webview ou nouvelle fenêtre JavaFX)
+                // Passez le clientSecret à votre page payment.html
+                openStripePaymentWindow(clientSecret, () -> {
+                    // CE CALLBACK EST EXÉCUTÉ SI LE PAIEMENT RÉUSSIT
+                    run(() -> {
+                        controller.placeOrder(OrderStatus.PAID); // On valide la commande seulement si Stripe dit OK
+                        finaliseOrderUI();
+                    });
+                });
 
             } else if ("paypal".equals(selectedMethod)) {
-                run(controller::placeOrder);
+                // Logique PayPal similaire à Stripe...
+                run(() -> controller.placeOrder(OrderStatus.PAID));
+                finaliseOrderUI();
 
             } else {
                 // Mode "cash" (À la livraison)
-                run(controller::placeOrder);
+                run(() -> controller.placeOrder(OrderStatus.PENDING));
+                finaliseOrderUI();
             }
 
-            // Finalisation de l'interface graphique
-            shell.updateCartCount(0);
-            showModernSuccess("🎉 Votre commande a été confirmée avec succès !");
-            showOrders();
         });
+
 
         // Note de sécurité
         HBox secureNote = new HBox(6);
@@ -1031,6 +1030,67 @@ public class CustomerDashboardView {
         scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
 
         setContent("PAIEMENT", scroll);
+    }
+
+    private void finaliseOrderUI() {
+        shell.updateCartCount(0);
+        showModernSuccess("🎉 Votre commande a été confirmée avec succès !");
+        showOrders();
+    }
+
+    private void openStripePaymentWindow(String clientSecret, Runnable onPaymentSuccess) {
+        Stage paymentStage = new Stage();
+        WebView webView = new WebView();
+        WebEngine webEngine = webView.getEngine();
+        final boolean[] paymentHandled = {false};
+
+        Runnable handlePaymentSuccess = () -> {
+            if (paymentHandled[0]) {
+                return;
+            }
+            paymentHandled[0] = true;
+            paymentStage.close();
+            onPaymentSuccess.run();
+        };
+
+        // 1. Chargement de la page locale
+        // Assurez-vous que payment.html est bien dans le classpath (src/main/resources)
+        String publishableKey = controller.getStripePublishableKey();
+        if (publishableKey == null || publishableKey.isBlank()) {
+            showModernError("La cle publique Stripe est introuvable dans le fichier .env.");
+            return;
+        }
+        String url = getClass().getResource("/payment.html").toExternalForm()
+                + "?secret=" + URLEncoder.encode(clientSecret, StandardCharsets.UTF_8)
+                + "&pk=" + URLEncoder.encode(publishableKey, StandardCharsets.UTF_8);
+        webEngine.load(url);
+
+        webEngine.setOnAlert(event -> {
+            if ("PAYMENT_SUCCESS".equals(event.getData())) {
+                Platform.runLater(handlePaymentSuccess);
+            }
+        });
+
+        // 2. Création du pont JS -> Java
+        webEngine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
+            if (newState == javafx.concurrent.Worker.State.SUCCEEDED) {
+                JSObject window = (JSObject) webEngine.executeScript("window");
+
+                // On crée un objet "appInterface" accessible depuis le JS
+                window.setMember("appInterface", new Object() {
+                    public void onPaymentSuccess() {
+                        Platform.runLater(() -> {
+                            handlePaymentSuccess.run();
+                        });
+                    }
+                });
+                webEngine.executeScript("window.javaBridgeReady = true;");
+            }
+        });
+
+        paymentStage.setTitle("Paiement Sécurisé");
+        paymentStage.setScene(new Scene(webView, 450, 650));
+        paymentStage.show();
     }
 
     private void showModernError(String message) {
@@ -1177,7 +1237,7 @@ public class CustomerDashboardView {
         row.getChildren().addAll(lbl, spacer, val);
         return row;
     }
-    
+
     private Button createFilterButton(String text, boolean active, List<Order> allOrders, VBox container, HBox filterParent) {
         Button b = new Button(text);
 
@@ -1600,13 +1660,15 @@ public class CustomerDashboardView {
         inputWrapper.setPadding(new Insets(0, 15, 0, 15));
         inputWrapper.setStyle("-fx-background-color: #f8fafc; -fx-border-color: #e2e8f0; -fx-border-radius: 12; -fx-background-radius: 12;");
 
-        Label icon = new Label(iconEmoji);
-        icon.setStyle("-fx-font-size: 16px;");
-
         input.setStyle("-fx-background-color: transparent; -fx-border-color: transparent; -fx-padding: 12 0; -fx-font-size: 14px; -fx-text-fill: #1e293b;");
         HBox.setHgrow(input, Priority.ALWAYS);
 
-        inputWrapper.getChildren().addAll(icon, input);
+        if (iconEmoji != null && !iconEmoji.isBlank()) {
+            Label icon = new Label(iconEmoji);
+            icon.setStyle("-fx-font-size: 16px;");
+            inputWrapper.getChildren().add(icon);
+        }
+        inputWrapper.getChildren().add(input);
 
         // Effet Focus sur le wrapper complet
         input.focusedProperty().addListener((obs, old, isFocused) -> {
@@ -1666,6 +1728,9 @@ public class CustomerDashboardView {
         TextField streetField = new TextField(parts.length > 0 ? parts[0] : "");
         TextField cityField = new TextField(parts.length > 1 ? parts[1] : "");
         TextField zipField = new TextField(parts.length > 2 ? parts[2] : "");
+        streetField.setPromptText("Ex: 123 Rue des Fleurs");
+        cityField.setPromptText("Casablanca");
+        zipField.setPromptText("20000");
 
         // 1. CRÉATION DE LA LISTE DÉROULANTE (COMBOBOX) POUR LE PAYS
         ComboBox<String> countryComboBox = new ComboBox<>();
@@ -1692,11 +1757,11 @@ public class CustomerDashboardView {
         countryLabel.setStyle("-fx-font-size: 11px; -fx-font-weight: 700; -fx-text-fill: #64748b; -fx-letter-spacing: 1px;");
         countryGroup.getChildren().addAll(countryLabel, countryComboBox);
 
-        VBox streetGroup = createModernField("RUE ET NUMÉRO", streetField, "Ex: 123 Rue des Fleurs");
+        VBox streetGroup = createModernField("RUE ET NUMÉRO", streetField, "");
 
         HBox cityZipRow = new HBox(15);
-        VBox cityGroup = createModernField("VILLE", cityField, "Casablanca");
-        VBox zipGroup = createModernField("CODE POSTAL", zipField, "20000");
+        VBox cityGroup = createModernField("VILLE", cityField, "");
+        VBox zipGroup = createModernField("CODE POSTAL", zipField, "");
         HBox.setHgrow(cityGroup, Priority.ALWAYS);
         HBox.setHgrow(zipGroup, Priority.ALWAYS);
         cityZipRow.getChildren().addAll(cityGroup, zipGroup);
@@ -1770,6 +1835,8 @@ public class CustomerDashboardView {
         TextField nameField = new TextField(controller.currentUser().getName());
         TextField emailField = new TextField(controller.currentUser().getEmail());
         TextField phoneField = new TextField(controller.currentUser().getPhone());
+        nameField.setPromptText("Nom complet");
+        emailField.setPromptText("email@exemple.com");
         phoneField.setPromptText("+212 600 000 000");
 
         Button saveBtn = new Button("Mettre à jour le profil");
@@ -2036,10 +2103,10 @@ public class CustomerDashboardView {
 
     public List<NavItem> navItems() {
         return List.of(
-            new NavItem(IconFactory.catalogIcon(), "Catalog", this::showCatalog),
-            new NavItem(IconFactory.cartIcon(), "Cart", this::showCart),
-            new NavItem(IconFactory.ordersIcon(), "Orders", this::showOrders),
-            new NavItem(IconFactory.profileIcon(), "Profile", this::showProfile)
+                new NavItem(IconFactory.catalogIcon(), "Catalog", this::showCatalog),
+                new NavItem(IconFactory.cartIcon(), "Cart", this::showCart),
+                new NavItem(IconFactory.ordersIcon(), "Orders", this::showOrders),
+                new NavItem(IconFactory.profileIcon(), "Profile", this::showProfile)
         );
     }
 }
