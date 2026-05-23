@@ -15,16 +15,22 @@ import javafx.util.Duration;
 
 public class AuthView {
     private final AuthController controller;
+    private final boolean startWithRegister;
     private VBox formPanel;
     private StackPane mainContainer; // Nécessaire pour superposer les popups
 
     public AuthView(AuthController controller) {
+        this(controller, false);
+    }
+
+    public AuthView(AuthController controller, boolean startWithRegister) {
         this.controller = controller;
+        this.startWithRegister = startWithRegister;
     }
 
     public Parent render() {
         mainContainer = new StackPane(); // Conteneur racine pour gérer les couches
-        
+
         BorderPane root = new BorderPane();
         root.getStyleClass().add("stockify-auth-root");
 
@@ -42,7 +48,7 @@ public class AuthView {
         StackPane center = new StackPane(shell);
         center.setPadding(new Insets(42));
         root.setCenter(center);
-        
+
         mainContainer.getChildren().add(root);
         return mainContainer;
     }
@@ -51,7 +57,7 @@ public class AuthView {
     private void showPopup(String title, String message, boolean isError) {
         StackPane overlay = new StackPane();
         overlay.setStyle("-fx-background-color: rgba(0, 0, 0, 0.6); -fx-background-radius: 30;");
-        
+
         VBox dialog = new VBox(20);
         dialog.setMaxSize(380, 220);
         dialog.setAlignment(Pos.CENTER);
@@ -79,54 +85,54 @@ public class AuthView {
         ScaleTransition st = new ScaleTransition(Duration.millis(200), dialog);
         st.setFromX(0.7); st.setFromY(0.7);
         st.setToX(1); st.setToY(1);
-        
+
         mainContainer.getChildren().add(overlay);
         st.play();
     }
 
     private void showRegister() {
         formPanel.getChildren().clear();
-        
+
         Label title = new Label("Create your account");
         title.getStyleClass().add("stockify-form-title");
 
         TextField name = stockifyField("Enter your name.");
         TextField email = stockifyField("Enter your mail.");
         PasswordField password = stockifyPassword("Enter your password.");
-        
+
         CheckBox terms = new CheckBox("By Signing Up, I agree with Terms & Conditions");
         terms.getStyleClass().add("stockify-check");
 
         Button signUp = Ui.primary("Sign Up");
         signUp.getStyleClass().add("stockify-primary-button");
-        
+
         signUp.setOnAction(e -> {
             // 1. Validations locales (champs vides, format)
             if (name.getText().trim().isEmpty()) {
                 showPopup("Name Required", "Please enter your full name to personalize your experience.", true);
-            } 
+            }
             else if (email.getText().trim().isEmpty()) {
                 showPopup("Email Required", "An email address is needed to secure your account.", true);
-            } 
+            }
             else if (!email.getText().matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
                 showPopup("Invalid Email", "Please provide a valid email address (e.g., name@example.com).", true);
-            } 
+            }
             else if (password.getText().isEmpty()) {
                 showPopup("Password Required", "For security reasons, you must create a password.", true);
-            } 
+            }
             else if (password.getText().length() < 8) {
                 showPopup("Weak Password", "Your password must be at least 8 characters long to ensure safety.", true);
-            } 
+            }
             else if (!terms.isSelected()) {
                 showPopup("Terms of Service", "Please review and accept the Terms & Conditions to proceed.", true);
-            } 
+            }
             else {
                 // 2. Appel au contrôleur et vérification du succès
                 // IMPORTANT : Votre contrôleur doit retourner un boolean (true = succès, false = email existe déjà)
                 boolean isRegistered = controller.registerCustomer(
-                    name.getText().trim(), 
-                    email.getText().trim(), 
-                    password.getText()
+                        name.getText().trim(),
+                        email.getText().trim(),
+                        password.getText()
                 );
 
                 if (isRegistered) {
@@ -136,7 +142,7 @@ public class AuthView {
                 } else {
                     // Échec (Email existant) : Popup rouge et ON RESTE sur la page actuelle
                     showPopup("Registration Failed", "This email address is already registered. Please use another one or sign in.", true);
-                    
+
                     // Optionnel : Mettre en évidence le champ email en rouge
                     email.setStyle("-fx-border-color: #ff4757; -fx-border-width: 0 0 2 0;");
                 }
@@ -160,8 +166,8 @@ public class AuthView {
                 actions, spacer(16)
         );
     }
-    
-  
+
+
     private void showLogin() {
         formPanel.getChildren().clear();
 
@@ -173,7 +179,7 @@ public class AuthView {
 
         Button signIn = Ui.primary("Sign In");
         signIn.getStyleClass().add("stockify-primary-button");
-        
+
         signIn.setOnAction(e -> {
             String emailTxt = email.getText().trim();
             String passTxt = password.getText();
@@ -190,7 +196,7 @@ public class AuthView {
                 if (!isAuthenticated) {
                     // ÉCHEC : On reste sur la page et on affiche la popup personnalisée
                     showPopup("Erreur d'authentification", "Email ou mot de passe incorrect.", true);
-                    
+
                     // On efface le mot de passe par sécurité
                     password.clear();
                 }
@@ -202,8 +208,19 @@ public class AuthView {
         signUp.getStyleClass().add("stockify-outline-button");
         signUp.setOnAction(e -> showRegister());
 
-        HBox actions = new HBox(28, signIn, signUp);
+        Button guest = Ui.secondary("Continue as Guest");
+        guest.getStyleClass().add("stockify-outline-button");
+        guest.setOnAction(e -> controller.continueAsGuest());
+
+        HBox primaryActions = new HBox(18, signIn, signUp);
+        primaryActions.setAlignment(Pos.CENTER_LEFT);
+
+        HBox guestRow = new HBox(guest);
+        guestRow.setAlignment(Pos.CENTER_LEFT);
+
+        VBox actions = new VBox(16, primaryActions, guestRow);
         actions.setAlignment(Pos.CENTER_LEFT);
+        actions.setFillWidth(true);
 
         // Construction du formulaire
         formPanel.getChildren().setAll(
@@ -216,7 +233,7 @@ public class AuthView {
     }
 
     // --- MÉTHODES UTILITAIRES CONSERVÉES ---
-    
+
     private StackPane formSide() {
         StackPane side = new StackPane();
         side.getStyleClass().add("stockify-blue-form-side");
@@ -249,8 +266,12 @@ public class AuthView {
         formPanel.setMaxWidth(430);
         StackPane.setAlignment(formPanel, Pos.CENTER_LEFT);
         StackPane.setMargin(formPanel, new Insets(0, 0, 0, 88));
-        
-        showLogin(); // Initialisation
+
+        if (startWithRegister) {
+            showRegister();
+        } else {
+            showLogin();
+        }
 
         side.getChildren().addAll(background, wave, formPanel);
         return side;
@@ -263,7 +284,7 @@ public class AuthView {
 
         VBox content = new VBox(26);
         content.setAlignment(Pos.CENTER);
-        
+
         // 1. Récupération de la ressource de manière sécurisée
         java.net.URL logoUrl = getClass().getResource("/images/Stockify.png");
 
@@ -274,7 +295,7 @@ public class AuthView {
                 logo.setFitWidth(255);
                 logo.setFitHeight(255);
                 logo.setPreserveRatio(true);
-                
+
                 // Animation optionnelle pour le logo (FadeIn)
                 FadeTransition ft = new FadeTransition(Duration.millis(800), logo);
                 ft.setFromValue(0);
@@ -297,10 +318,10 @@ public class AuthView {
         slogan.setWrapText(true);
         slogan.setMaxWidth(390);
         slogan.setAlignment(Pos.CENTER);
-        
+
         content.getChildren().add(slogan);
         side.getChildren().add(content);
-        
+
         return side;
     }
 

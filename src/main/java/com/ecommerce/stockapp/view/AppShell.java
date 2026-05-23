@@ -59,6 +59,9 @@ public class AppShell {
     private final User user;
     private final List<NavItem> navItems;
     private final Runnable logout;
+    private final boolean guestMode;
+    private final Runnable showLogin;
+    private final Runnable showRegister;
     private final BorderPane root = new BorderPane();
     private final VBox content = new VBox(20);
     private final VBox navBox = new VBox(10);
@@ -81,10 +84,13 @@ public class AppShell {
         }
     }
 
-    public AppShell(User user, List<NavItem> navItems, Runnable logout) {
+    public AppShell(User user, List<NavItem> navItems, Runnable logout, boolean guestMode, Runnable showLogin, Runnable showRegister) {
         this.user = user;
         this.navItems = navItems;
         this.logout = logout;
+        this.guestMode = guestMode;
+        this.showLogin = showLogin;
+        this.showRegister = showRegister;
         build();
     }
 
@@ -134,10 +140,15 @@ public class AppShell {
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
 
-        profile = SidebarProfileFactory.create(user, () -> triggerNav("Profile"), logout);
+        profile = guestMode
+                ? null
+                : SidebarProfileFactory.create(user, () -> triggerNav("Profile"), logout);
 
-        // On ajoute seulement le profil à la fin
-        sidebar.getChildren().addAll(menuPill, logoBlock, navBox, spacer, profile);
+        if (profile == null) {
+            sidebar.getChildren().addAll(menuPill, logoBlock, navBox, spacer);
+        } else {
+            sidebar.getChildren().addAll(menuPill, logoBlock, navBox, spacer, profile);
+        }
         return sidebar;
     }
 
@@ -253,27 +264,40 @@ public class AppShell {
         cartContainer.setOnMouseClicked(e -> triggerNav("Cart"));
         // --------------------------------
 
-        StackPane avatar = Ui.avatar(user.getName());
-        avatar.getStyleClass().add("shell-avatar");
-
-        Label name = new Label(user.getName());
-        name.getStyleClass().add("shell-user-name");
-
-        Label role = new Label(user.getRole().name().replace('_', ' '));
-        role.getStyleClass().add("shell-user-role");
-
-        VBox identity = new VBox(1, name, role);
-        identity.setAlignment(Pos.CENTER_LEFT);
-        identity.setCursor(javafx.scene.Cursor.HAND);
-        avatar.setCursor(javafx.scene.Cursor.HAND);
-
-        HBox profileShortcut = new HBox(10, avatar, identity);
-        profileShortcut.setAlignment(Pos.CENTER_LEFT);
-        profileShortcut.setCursor(javafx.scene.Cursor.HAND);
-        profileShortcut.setOnMouseClicked(e -> triggerNav("Profile"));
-
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        javafx.scene.Node profileShortcut;
+        if (guestMode) {
+            Button signIn = new Button("Sign In");
+            signIn.setStyle("-fx-background-color: white; -fx-text-fill: #1e3a5f; -fx-border-color: #1e3a5f; -fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 12 22; -fx-font-weight: bold; -fx-cursor: hand;");
+            signIn.setMinWidth(108);
+            signIn.setOnAction(e -> showLogin.run());
+
+            HBox guestActions = new HBox(10, signIn);
+            guestActions.setAlignment(Pos.CENTER_LEFT);
+            profileShortcut = guestActions;
+        } else {
+            StackPane avatar = Ui.avatar(user.getName());
+            avatar.getStyleClass().add("shell-avatar");
+
+            Label name = new Label(user.getName());
+            name.getStyleClass().add("shell-user-name");
+
+            Label role = new Label(user.getRole().name().replace('_', ' '));
+            role.getStyleClass().add("shell-user-role");
+
+            VBox identity = new VBox(1, name, role);
+            identity.setAlignment(Pos.CENTER_LEFT);
+            identity.setCursor(javafx.scene.Cursor.HAND);
+            avatar.setCursor(javafx.scene.Cursor.HAND);
+
+            HBox customerShortcut = new HBox(10, avatar, identity);
+            customerShortcut.setAlignment(Pos.CENTER_LEFT);
+            customerShortcut.setCursor(javafx.scene.Cursor.HAND);
+            customerShortcut.setOnMouseClicked(e -> triggerNav("Profile"));
+            profileShortcut = customerShortcut;
+        }
 
         // On assemble : [Titre] [Spacer] [Search] [Espace] [Cart] [Espace] [Avatar/Identity]
         HBox header = new HBox(25, title, spacer, search, cartContainer, profileShortcut);
@@ -456,7 +480,9 @@ public class AppShell {
         if (collapsed) {
             sidebar.setPadding(new Insets(28, 0, 24, 0));
             navBox.setAlignment(Pos.TOP_CENTER);
-            profile.setAlignment(Pos.CENTER); // Centre l'avatar quand réduit
+            if (profile != null) {
+                profile.setAlignment(Pos.CENTER); // Centre l'avatar quand réduit
+            }
             navBox.getChildren().forEach(node -> {
                 if (node instanceof Button btn) {
 
@@ -474,7 +500,9 @@ public class AppShell {
         } else {
             sidebar.setPadding(new Insets(28, 24, 24, 24));
             navBox.setAlignment(Pos.TOP_LEFT);
-            profile.setAlignment(Pos.CENTER_LEFT);
+            if (profile != null) {
+                profile.setAlignment(Pos.CENTER_LEFT);
+            }
             navBox.getChildren().forEach(node -> {
                 if (node instanceof Button btn) {
 
@@ -507,8 +535,10 @@ public class AppShell {
         sectionTitle.setVisible(!collapsed);
         sectionTitle.setManaged(!collapsed);
 
-        profile.setVisible(!collapsed);
-        profile.setManaged(!collapsed);
+        if (profile != null) {
+            profile.setVisible(!collapsed);
+            profile.setManaged(!collapsed);
+        }
 
         for (javafx.scene.Node node : collapsibleNodes) {
             node.setVisible(!collapsed);

@@ -68,6 +68,7 @@ import netscape.javascript.JSObject;
 public class CustomerDashboardView {
     private final CustomerController controller;
     private final AppShell shell;
+    private boolean guestBannerDismissed;
 
     public CustomerDashboardView(CustomerController controller, AppShell shell) {
         this.controller = controller;
@@ -90,6 +91,93 @@ public class CustomerDashboardView {
         showCatalog();
 
         return shell.render();
+    }
+
+    private boolean isGuestMode() {
+        return controller.isGuest();
+    }
+
+    private void promptGuestCheckout() {
+        Stage dialog = new Stage();
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.initStyle(StageStyle.TRANSPARENT);
+
+        VBox card = new VBox(22);
+        card.setPadding(new Insets(28));
+        card.setMaxWidth(460);
+        card.setStyle("-fx-background-color: white; -fx-background-radius: 24; -fx-border-color: #dbe7f5; -fx-border-radius: 24;");
+        card.setEffect(new DropShadow(30, Color.rgb(15, 23, 42, 0.18)));
+
+        HBox header = new HBox();
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        VBox titleBox = new VBox(6);
+        Label eyebrow = new Label("CHECKOUT");
+        eyebrow.setStyle("-fx-text-fill: #3b82f6; -fx-font-size: 11px; -fx-font-weight: 900; -fx-letter-spacing: 1px;");
+        Label title = new Label("Create an account to place your order");
+        title.setWrapText(true);
+        title.setStyle("-fx-text-fill: #0f172a; -fx-font-size: 24px; -fx-font-weight: 900;");
+        titleBox.getChildren().addAll(eyebrow, title);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Button close = new Button("×");
+        close.setStyle("-fx-background-color: transparent; -fx-text-fill: #64748b; -fx-font-size: 22px; -fx-cursor: hand; -fx-padding: 0 4;");
+        close.setOnAction(e -> dialog.close());
+
+        header.getChildren().addAll(titleBox, spacer, close);
+
+        Label message = new Label("You can browse the catalog and build your cart as a guest. To continue to checkout, please sign in or create an account.");
+        message.setWrapText(true);
+        message.setStyle("-fx-text-fill: #475569; -fx-font-size: 14px; -fx-line-spacing: 3px;");
+
+        HBox infoStrip = new HBox(12);
+        infoStrip.setAlignment(Pos.CENTER_LEFT);
+        infoStrip.setPadding(new Insets(14, 16, 14, 16));
+        infoStrip.setStyle("-fx-background-color: #f8fbff; -fx-background-radius: 16; -fx-border-color: #dbeafe; -fx-border-radius: 16;");
+        Label infoIcon = new Label("i");
+        infoIcon.setAlignment(Pos.CENTER);
+        infoIcon.setMinSize(28, 28);
+        infoIcon.setStyle("-fx-background-color: #dbeafe; -fx-text-fill: #2563eb; -fx-font-size: 16px; -fx-font-weight: bold; -fx-background-radius: 999;");
+        Label infoText = new Label("Your cart stays available for this visit.");
+        infoText.setStyle("-fx-text-fill: #1e3a5f; -fx-font-size: 13px; -fx-font-weight: 600;");
+        infoStrip.getChildren().addAll(infoIcon, infoText);
+
+        Button signIn = new Button("Sign In");
+        signIn.setStyle("-fx-background-color: white; -fx-text-fill: #1e3a5f; -fx-border-color: #1e3a5f; -fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 12 22; -fx-font-weight: bold; -fx-cursor: hand;");
+        signIn.setMinWidth(120);
+        signIn.setOnAction(e -> {
+            dialog.close();
+            controller.showLoginScreen();
+        });
+
+        Button signUp = new Button("Sign Up");
+        signUp.setStyle("-fx-background-color: #1e3a5f; -fx-text-fill: white; -fx-background-radius: 12; -fx-padding: 12 22; -fx-font-weight: bold; -fx-cursor: hand;");
+        signUp.setMinWidth(120);
+        signUp.setOnAction(e -> {
+            dialog.close();
+            controller.showRegisterScreen();
+        });
+
+        Button cancel = new Button("Maybe later");
+        cancel.setStyle("-fx-background-color: #eef2f7; -fx-text-fill: #475569; -fx-background-radius: 12; -fx-padding: 12 22; -fx-font-weight: bold; -fx-cursor: hand;");
+        cancel.setMinWidth(120);
+        cancel.setOnAction(e -> dialog.close());
+
+        HBox actions = new HBox(12, signIn, signUp, cancel);
+        actions.setAlignment(Pos.CENTER_RIGHT);
+
+        card.getChildren().addAll(header, message, infoStrip, actions);
+
+        StackPane overlay = new StackPane(card);
+        overlay.setPadding(new Insets(26));
+        overlay.setStyle("-fx-background-color: transparent;");
+
+        Scene scene = new Scene(overlay);
+        scene.setFill(Color.TRANSPARENT);
+        dialog.setScene(scene);
+        dialog.showAndWait();
     }
 
     private void showCatalog() {
@@ -209,9 +297,50 @@ public class CustomerDashboardView {
         filterAction.accept("TOUT VOIR");
 
         // FINAL LAYOUT
-        VBox layout = new VBox(0, promoLabel, categoryScroll, mainProductScroll);
+        VBox layout = new VBox(0);
+        layout.getChildren().addAll(promoLabel, categoryScroll);
+        if (isGuestMode() && !guestBannerDismissed) {
+            layout.getChildren().add(guestCatalogBanner());
+        }
+        layout.getChildren().add(mainProductScroll);
 
         setContent("Product Catalog", layout);
+    }
+
+    private Node guestCatalogBanner() {
+        HBox banner = new HBox(16);
+        banner.setAlignment(Pos.CENTER_LEFT);
+        banner.setPadding(new Insets(18, 24, 18, 24));
+        banner.setStyle("-fx-background-color: linear-gradient(to right, #eff6ff, #f8fafc); -fx-border-color: #bfdbfe; -fx-border-width: 0 0 1 0;");
+
+        VBox copy = new VBox(4);
+        Label title = new Label("New here?");
+        title.setStyle("-fx-font-size: 18px; -fx-font-weight: 900; -fx-text-fill: #0f172a;");
+        Label subtitle = new Label("Browse freely and add items to your cart. Create an account when you're ready to place the order.");
+        subtitle.setStyle("-fx-font-size: 13px; -fx-text-fill: #475569;");
+        subtitle.setWrapText(true);
+        copy.getChildren().addAll(title, subtitle);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Button signIn = new Button("Sign In");
+        signIn.setStyle("-fx-background-color: white; -fx-text-fill: #1e3a5f; -fx-border-color: #1e3a5f; -fx-border-radius: 10; -fx-background-radius: 10; -fx-padding: 10 18; -fx-font-weight: bold; -fx-cursor: hand;");
+        signIn.setOnAction(e -> controller.showLoginScreen());
+
+        Button signUp = new Button("Sign Up");
+        signUp.setStyle("-fx-background-color: #1e3a5f; -fx-text-fill: white; -fx-background-radius: 10; -fx-padding: 10 18; -fx-font-weight: bold; -fx-cursor: hand;");
+        signUp.setOnAction(e -> controller.showRegisterScreen());
+
+        Button close = new Button("×");
+        close.setStyle("-fx-background-color: transparent; -fx-text-fill: #64748b; -fx-font-size: 18px; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 4 8;");
+        close.setOnAction(e -> {
+            guestBannerDismissed = true;
+            showCatalog();
+        });
+
+        banner.getChildren().addAll(copy, spacer, signIn, signUp, close);
+        return banner;
     }
 
     private VBox productCard(Product product) {
@@ -653,6 +782,10 @@ public class CustomerDashboardView {
                         "-fx-font-size: 14px;"
         );
         btnOrder.setOnAction(e -> {
+            if (isGuestMode()) {
+                promptGuestCheckout();
+                return;
+            }
             showPayment(); // ← Redirige vers la page paiement
         });
 
@@ -662,6 +795,10 @@ public class CustomerDashboardView {
         setContent("Panier", mainLayout);
     }
     private void showPayment() {
+        if (isGuestMode()) {
+            promptGuestCheckout();
+            return;
+        }
         shell.setSearchHandler(null);
         BigDecimal total = controller.cartTotal();
         List<CartItem> items = controller.cart();
@@ -1271,6 +1408,10 @@ public class CustomerDashboardView {
         return b;
     }
     private void showOrders() {
+        if (isGuestMode()) {
+            promptGuestCheckout();
+            return;
+        }
         shell.setSearchHandler(null);
 
         // 1. RÉCUPÉRATION DES DONNÉES
@@ -1482,6 +1623,10 @@ public class CustomerDashboardView {
 
 
     private void showProfile() {
+        if (isGuestMode()) {
+            promptGuestCheckout();
+            return;
+        }
         shell.setSearchHandler(null);
         User user = controller.currentUser();
         if (user == null) return;

@@ -3,7 +3,9 @@ package com.ecommerce.stockapp.controller;
 import com.ecommerce.stockapp.dao.ActivityLogDao;
 import com.ecommerce.stockapp.dao.DashboardDao;
 import com.ecommerce.stockapp.dao.UserDao;
+import com.ecommerce.stockapp.model.Role;
 import com.ecommerce.stockapp.model.User;
+import com.ecommerce.stockapp.model.UserStatus;
 import com.ecommerce.stockapp.service.*;
 import com.ecommerce.stockapp.view.*;
 import javafx.scene.Scene;
@@ -60,27 +62,7 @@ public class AuthController {
                 ).render());
 
                 case CUSTOMER -> {
-                    // 1. Création du Controller avec UserService pour ton profil
-                    CustomerController controller = new CustomerController(
-                            user, this, productService, cartService, orderService, userService, null,payementService
-                    );
-
-                    // 2. Création de la View (indispensable pour lier les actions de navigation)
-                    CustomerDashboardView view = new CustomerDashboardView(controller, null);
-
-                    // 3. Configuration de l'AppShell avec les méthodes de la vue (Catalog, Cart, Profil...)
-                    AppShell shell = new AppShell(
-                            user,
-                            view.navItems(), // Récupère automatiquement les icônes et actions
-                            this::logout
-                    );
-
-                    // 4. On lie tout ensemble (Injection de dépendances circulaire résolue)
-                    controller.setAppShell(shell);
-
-                    // On recrée proprement la vue avec le shell initialisé
-                    CustomerDashboardView finalView = new CustomerDashboardView(controller, shell);
-                    set(finalView.render());
+                    showCustomerDashboard(user, payementService);
                 }
             }
             return true;
@@ -134,6 +116,31 @@ public class AuthController {
         set(new AuthView(this).render());
     }
 
+    public void showLoginScreen() {
+        set(new AuthView(this, false).render());
+    }
+
+    public void showRegisterScreen() {
+        set(new AuthView(this, true).render());
+    }
+
+    public void continueAsGuest() {
+        User guest = new User(
+                0,
+                "Guest",
+                "",
+                null,
+                Role.CUSTOMER,
+                UserStatus.ACTIVE,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+        showCustomerDashboard(guest, null);
+    }
+
     public boolean isEmailTaken(String email) {
         return userService.existsByEmail(email);
     }
@@ -147,5 +154,27 @@ public class AuthController {
         } else {
             scene.setRoot(root);
         }
+    }
+
+    private void showCustomerDashboard(User user, PaymentService paymentService) {
+        CustomerController controller = new CustomerController(
+                user, this, productService, cartService, orderService, userService, null, paymentService
+        );
+
+        CustomerDashboardView view = new CustomerDashboardView(controller, null);
+
+        AppShell shell = new AppShell(
+                user,
+                view.navItems(),
+                this::logout,
+                controller.isGuest(),
+                this::showLoginScreen,
+                this::showRegisterScreen
+        );
+
+        controller.setAppShell(shell);
+
+        CustomerDashboardView finalView = new CustomerDashboardView(controller, shell);
+        set(finalView.render());
     }
 }

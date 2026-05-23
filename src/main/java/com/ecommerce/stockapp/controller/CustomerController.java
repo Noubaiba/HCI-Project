@@ -11,6 +11,7 @@ import com.ecommerce.stockapp.model.OrderItem;
 import javafx.scene.Node;
 import javafx.scene.control.PasswordField; // Profites-en pour ajouter celui-ci aussi
 
+import java.util.ArrayList;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -23,6 +24,8 @@ public class CustomerController {
     private final UserService userService; // Utilisation du Service pour respecter l'architecture
     private AppShell appShell;
     PaymentService paymentService;
+    private final List<CartItem> guestCart = new ArrayList<>();
+    private int guestCartSequence = -1;
 
     // Dans CustomerController.java
 
@@ -65,6 +68,10 @@ public class CustomerController {
 
     public User currentUser() { return currentUser; }
 
+    public boolean isGuest() {
+        return currentUser == null || currentUser.getId() <= 0;
+    }
+
     public void logout() { auth.logout(); }
 
     // --- Gestion des Produits ---
@@ -74,20 +81,42 @@ public class CustomerController {
 
     // --- Gestion du Panier (avec mise à jour visuelle AppShell) ---
     public List<CartItem> cart() {
+        if (isGuest()) {
+            return guestCart;
+        }
         return cart.items(currentUser.getId());
     }
 
     public BigDecimal cartTotal() {
+        if (isGuest()) {
+            return guestCart.stream().map(CartItem::getSubtotal).reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
         return cart.total(currentUser.getId());
     }
 
     public void addToCart(Product product, int quantity) {
-        cart.add(currentUser.getId(), product, quantity);
+        if (isGuest()) {
+            CartItem existing = guestCart.stream()
+                    .filter(item -> item.getProduct().getId() == product.getId())
+                    .findFirst()
+                    .orElse(null);
+            if (existing != null) {
+                existing.setQuantity(existing.getQuantity() + quantity);
+            } else {
+                guestCart.add(new CartItem(guestCartSequence--, 0, product, quantity));
+            }
+        } else {
+            cart.add(currentUser.getId(), product, quantity);
+        }
         updateUI();
     }
 
     public void removeCart(int cartId) {
-        cart.remove(cartId);
+        if (isGuest()) {
+            guestCart.removeIf(item -> item.getId() == cartId);
+        } else {
+            cart.remove(cartId);
+        }
         updateUI();
     }
 
@@ -99,16 +128,25 @@ public class CustomerController {
 
     // --- Gestion des Commandes ---
     public void placeOrder() {
+        if (isGuest()) {
+            throw new IllegalStateException("Authentication required to place an order.");
+        }
         orders.placeOrder(currentUser.getId());
         if (appShell != null) appShell.updateCartCount(0);
     }
 
     public void placeOrder(OrderStatus status) {
+        if (isGuest()) {
+            throw new IllegalStateException("Authentication required to place an order.");
+        }
         orders.placeOrder(currentUser.getId(), status);
         if (appShell != null) appShell.updateCartCount(0);
     }
 
     public List<Order> orders() {
+        if (isGuest()) {
+            return List.of();
+        }
         return orders.userOrders(currentUser.getId());
     }
 
@@ -129,10 +167,20 @@ public class CustomerController {
     }
 
     public void removeFromCart(CartItem item) {
+        if (isGuest()) {
+            guestCart.removeIf(cartItem -> cartItem.getId() == item.getId());
+            updateUI();
+            return;
+        }
         cart.remove(item.getId());
     }
 
     public void updateCartQuantity(CartItem item, int quantity) {
+        if (isGuest()) {
+            item.setQuantity(quantity);
+            updateUI();
+            return;
+        }
         cart.update(item.getId(), quantity);
     }
     public int changerMotDePasse(String ancienMdp, String nouveauMdp) {
@@ -182,9 +230,16 @@ public class CustomerController {
     }
 
     public String getStripePublishableKey() {
-        return paymentService.getPublishableKey();
+        return paymentService == null ? null : paymentService.getPublishableKey();
     }
 
+    public void showLoginScreen() {
+        auth.showLoginScreen();
+    }
+
+    public void showRegisterScreen() {
+        auth.showRegisterScreen();
+    }
 
 
 }

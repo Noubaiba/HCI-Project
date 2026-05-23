@@ -19,5 +19,6 @@ public class CartItem {
     public int getUserId() { return userId; }
     public Product getProduct() { return product; }
     public int getQuantity() { return quantity; }
+    public void setQuantity(int quantity) { this.quantity = quantity; }
     public BigDecimal getSubtotal() { return product.getPrice().multiply(BigDecimal.valueOf(quantity)); }
 }

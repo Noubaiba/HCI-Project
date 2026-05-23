@@ -4,9 +4,7 @@ import com.ecommerce.stockapp.controller.AuthController;
 import com.ecommerce.stockapp.dao.*;
 import com.ecommerce.stockapp.service.*;
 import com.ecommerce.stockapp.view.AppTheme;
-import com.ecommerce.stockapp.view.AuthView;
 import javafx.application.Application;
-import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 public class MainApp extends Application {
@@ -51,17 +49,12 @@ public class MainApp extends Application {
 
         // 4. Démarrage du service de liens d'activation (écouteur de protocole)
         new ActivationLinkService(authService, authController::logout).start();
-        // 5. Configuration de la vue initiale (Login/Auth)
-        AuthView view = new AuthView(authController);
-        Scene scene = new Scene(view.render(), 1180, 760);
-
-        // Application du thème CSS (ton fichier combiné précédemment)
-        AppTheme.apply(scene);
-
         stage.setTitle("Product & Stock Management System");
         stage.setMinWidth(1050);
         stage.setMinHeight(700);
-        stage.setScene(scene);
+
+        // 5. Vue initiale : catalogue en mode visiteur
+        authController.continueAsGuest();
         stage.show();
         
         System.out.println("APP STARTED");

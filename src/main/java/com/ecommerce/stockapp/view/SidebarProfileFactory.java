@@ -34,6 +34,29 @@ public final class SidebarProfileFactory {
         return wrapper;
     }
 
+    public static VBox createGuest(Runnable loginAction, Runnable registerAction) {
+        Label title = new Label("Guest mode");
+        title.getStyleClass().add("shell-profile-name");
+
+        Label subtitle = new Label("Browse freely, sign up to order.");
+        subtitle.getStyleClass().add("shell-profile-email");
+        subtitle.setWrapText(true);
+
+        Button login = new Button("Sign In");
+        login.setStyle("-fx-background-color: #f1f5f9; -fx-text-fill: #475569; -fx-font-weight: bold; -fx-padding: 10 16; -fx-background-radius: 8; -fx-cursor: hand;");
+        login.setOnAction(e -> loginAction.run());
+
+        Button register = new Button("Sign Up");
+        register.setStyle("-fx-background-color: #1e3a5f; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 16; -fx-background-radius: 8; -fx-cursor: hand;");
+        register.setOnAction(e -> registerAction.run());
+
+        HBox actions = new HBox(10, login, register);
+        VBox wrapper = new VBox(10, title, subtitle, actions);
+        wrapper.setPadding(new Insets(14));
+        wrapper.getStyleClass().add("shell-profile-wrapper");
+        return wrapper;
+    }
+
     private static HBox profileRow(User user) {
         var avatar = Ui.avatar(user.getName());
 
