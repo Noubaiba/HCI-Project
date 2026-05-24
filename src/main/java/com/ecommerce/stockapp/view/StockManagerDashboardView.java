@@ -10,15 +10,20 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
-import javafx.scene.layout.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.*;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class StockManagerDashboardView {
+
+    private static final int PRODUCT_PAGE_SIZE = 10;
+    private static final int HISTORY_PAGE_SIZE = 10;
 
     private final StockManagerController controller;
     private BorderPane root;
@@ -35,20 +40,18 @@ public class StockManagerDashboardView {
         this.controller = controller;
     }
 
-    // =========================================================
-    // RENDER
-    // =========================================================
     public Parent render() {
         root = new BorderPane();
-        root.getStyleClass().addAll("app-root", "admin-root");
+        root.getStyleClass().addAll("app-root", "stock-manager-root");
         root.setLeft(nav());
         showProducts();
         return root;
     }
 
-    // =========================================================
-    // HAMBURGER ICON
-    // =========================================================
+    // ═══════════════════════════════════════════════
+    //  SIDEBAR
+    // ═══════════════════════════════════════════════
+
     private VBox hamburgerIcon() {
         VBox bars = new VBox(4);
         bars.setAlignment(Pos.CENTER);
@@ -60,9 +63,6 @@ public class StockManagerDashboardView {
         return bars;
     }
 
-    // =========================================================
-    // SIDEBAR / NAV
-    // =========================================================
     private VBox nav() {
         sidebar = new VBox(26);
         sidebar.getStyleClass().add("admin-sidebar");
@@ -73,7 +73,6 @@ public class StockManagerDashboardView {
         sectionTitle = new Label("STOCK SPACE");
         sectionTitle.getStyleClass().add("admin-sidebar-eyebrow");
 
-        // Hamburger
         Button menuButton = new Button();
         menuButton.setGraphic(hamburgerIcon());
         menuButton.getStyleClass().add("hamburger-btn");
@@ -84,17 +83,15 @@ public class StockManagerDashboardView {
         menuPill.setAlignment(Pos.CENTER);
         menuPill.setMaxWidth(Double.MAX_VALUE);
 
-        // Logo block
         VBox logoBlock = new VBox(10, brandBlock(), sectionTitle);
         logoBlock.setAlignment(Pos.TOP_LEFT);
         logoBlock.setMaxWidth(Double.MAX_VALUE);
 
-        // Nav buttons
         navBox = new VBox(10);
         navBox.setMaxWidth(Double.MAX_VALUE);
         navBox.getChildren().addAll(
-                navButton(IconFactory.box(),   "Products",      this::showProducts),
-                navButton(IconFactory.log(),   "Low Stock",     this::showLowStock),
+                navButton(IconFactory.box(), "Products", this::showProducts),
+                navButton(IconFactory.log(), "Low Stock", this::showLowStock),
                 navButton(IconFactory.chart(), "Stock History", this::showHistory),
                 navButton(IconFactory.profileIcon(), "Profile", this::showProfile)
         );
@@ -115,9 +112,6 @@ public class StockManagerDashboardView {
         return sidebar;
     }
 
-    // =========================================================
-    // BRAND BLOCK
-    // =========================================================
     private VBox brandBlock() {
         ImageView logoImage = new ImageView();
         try {
@@ -128,7 +122,7 @@ public class StockManagerDashboardView {
         logoImage.setFitHeight(45);
         logoImage.setPreserveRatio(true);
 
-        logoText = new Label("Stockify");  // product name
+        logoText = new Label("Stockify");
         logoText.setStyle("-fx-font-size: 22px; -fx-font-weight: 900; -fx-text-fill: #111827;");
         if (!collapsibleNodes.contains(logoText)) collapsibleNodes.add(logoText);
 
@@ -143,9 +137,6 @@ public class StockManagerDashboardView {
         return brand;
     }
 
-    // =========================================================
-    // TOGGLE SIDEBAR
-    // =========================================================
     private void toggleSidebar() {
         collapsed = !collapsed;
 
@@ -173,10 +164,8 @@ public class StockManagerDashboardView {
         }
 
         navBox.getChildren().forEach(node -> {
-            if (node instanceof Button btn) {
-                if (btn.getGraphic() instanceof HBox hbox) {
-                    hbox.setAlignment(collapsed ? Pos.CENTER : Pos.CENTER_LEFT);
-                }
+            if (node instanceof Button btn && btn.getGraphic() instanceof HBox hbox) {
+                hbox.setAlignment(collapsed ? Pos.CENTER : Pos.CENTER_LEFT);
             }
         });
 
@@ -208,9 +197,6 @@ public class StockManagerDashboardView {
         }
     }
 
-    // =========================================================
-    // NAV BUTTON
-    // =========================================================
     private Button navButton(Node icon, String label, Runnable action) {
         Label text = new Label(label);
         text.getStyleClass().add("admin-sidebar-nav-label");
@@ -247,155 +233,507 @@ public class StockManagerDashboardView {
                     if (!btn.getStyleClass().contains("active")) btn.getStyleClass().add("active");
                 });
     }
+    // ═══════════════════════════════════════════════
+    //  PRODUCTS PAGE
+    // ═══════════════════════════════════════════════
 
-    // =========================================================
-    // PAGES
-    // =========================================================
-
-    /** Products page — operational inventory table */
     private void showProducts() {
         selectNav("Products");
+        List<Product> allProducts = controller.products("");
+        final String[] activeFilter = {"all"};
 
-        TextField search = Ui.text("Search stock");
-        TableView<Product> table = productTable();
-        table.setItems(FXCollections.observableArrayList(controller.products("")));
-        search.textProperty().addListener((o, old, v) ->
-                table.setItems(FXCollections.observableArrayList(controller.products(v))));
+        // ── Topbar ──
+        TextField search = new TextField();
+        search.setPromptText("Search stock...");
+        search.getStyleClass().add("search-field");
+        HBox topbar = managerTopbar(
+                "Operational inventory",
+                "Track product availability, restock alerts, and inventory actions.",
+                search
+        );
 
-        Button addStock = Ui.primary("+ Stock");
-        addStock.setOnAction(e -> stockDialog(table.getSelectionModel().getSelectedItem(), false, table, search));
+        // ── Stats ──
+        HBox stats = buildStatsRow(allProducts);
 
-        Button adjust = Ui.secondary("Adjust quantity");
-        adjust.setOnAction(e -> stockDialog(table.getSelectionModel().getSelectedItem(), true, table, search));
-
-        Button addProduct = Ui.secondary("+ Product");
-        addProduct.setOnAction(e -> {
-            productDialog(null);
-            table.setItems(FXCollections.observableArrayList(controller.products(search.getText())));
+        // ── Table ──
+        TableView<Product> table = buildProductTable();
+        Pagination pagination = new Pagination();
+        pagination.getStyleClass().add("table-pagination");
+        refreshProductPage(table, pagination, filteredProducts("", activeFilter[0]));
+        pagination.currentPageIndexProperty().addListener((o, old, val) ->
+                refreshProductPage(table, pagination, filteredProducts(search.getText(), activeFilter[0])));
+        search.textProperty().addListener((o, old, val) -> {
+            pagination.setCurrentPageIndex(0);
+            refreshProductPage(table, pagination, filteredProducts(val, activeFilter[0]));
         });
 
-        Button delete = Ui.danger("Delete obsolete");
-        delete.setOnAction(e -> {
-            Product selected = table.getSelectionModel().getSelectedItem();
-            if (selected != null && Ui.confirm("Delete product", "Delete obsolete product " + selected.getName() + "?")) {
-                run(() -> controller.deleteProduct(selected));
-                table.setItems(FXCollections.observableArrayList(controller.products(search.getText())));
+        HBox tabBar = buildTabBar(activeFilter[0], filter -> {
+            activeFilter[0] = filter;
+            pagination.setCurrentPageIndex(0);
+            refreshProductPage(table, pagination, filteredProducts(search.getText(), activeFilter[0]));
+        });
+
+        // ── Toolbar buttons ──
+        Button btnAdd    = styledBtn("+ Product",        "btn-primary");
+        Button btnStock  = styledBtn("+ Add stock",      "btn-secondary");
+        Button btnAdjust = styledBtn("Adjust qty",       "btn-secondary");
+        Button btnDelete = styledBtn("Delete obsolete",  "btn-danger");
+
+        btnAdd.setOnAction(e -> {
+            productDialog(null);
+            pagination.setCurrentPageIndex(0);
+            refreshProductPage(table, pagination, filteredProducts(search.getText(), activeFilter[0]));
+        });
+        btnStock.setOnAction(e -> stockDialog(table.getSelectionModel().getSelectedItem(), false,
+                () -> refreshProductPage(table, pagination, filteredProducts(search.getText(), activeFilter[0]))));
+        btnAdjust.setOnAction(e -> stockDialog(table.getSelectionModel().getSelectedItem(), true,
+                () -> refreshProductPage(table, pagination, filteredProducts(search.getText(), activeFilter[0]))));
+        btnDelete.setOnAction(e -> {
+            Product sel = table.getSelectionModel().getSelectedItem();
+            if (sel != null && confirmDialog("Delete product",
+                    "Delete obsolete product \"" + sel.getName() + "\"?")) {
+                runAction(() -> controller.deleteProduct(sel));
+                refreshProductPage(table, pagination, filteredProducts(search.getText(), activeFilter[0]));
             }
         });
 
+        Region tbSpacer = new Region(); HBox.setHgrow(tbSpacer, Priority.ALWAYS);
+        HBox toolbar = new HBox(10, btnAdd, btnStock, btnAdjust, tbSpacer, btnDelete);
+        toolbar.getStyleClass().add("toolbar");
+        toolbar.setAlignment(Pos.CENTER_LEFT);
+
+        // ── Double-click to edit ──
         table.setRowFactory(tv -> {
             TableRow<Product> row = new TableRow<>();
-            row.setOnMouseClicked(event -> {
-                if (event.getClickCount() == 2 && !row.isEmpty()) {
+            row.setOnMouseClicked(ev -> {
+                if (ev.getClickCount() == 2 && !row.isEmpty()) {
                     productDialog(row.getItem());
-                    table.setItems(FXCollections.observableArrayList(controller.products(search.getText())));
+                    refreshProductPage(table, pagination, filteredProducts(search.getText(), activeFilter[0]));
                 }
             });
             return row;
         });
+        // ── Table shell: pagination stays visible while the table uses remaining space ──
+        BorderPane tableWrap = new BorderPane();
+        tableWrap.getStyleClass().add("table-wrapper");
+        tableWrap.setCenter(table);
+        tableWrap.setBottom(pagination);
+        BorderPane.setMargin(pagination, new Insets(10, 0, 0, 0));
+        VBox.setVgrow(table, Priority.ALWAYS);
+        VBox.setVgrow(tableWrap, Priority.ALWAYS);
 
-        // KPI mini-cards at the top
-        List<Product> all = controller.products("");
-        int totalProducts = all.size();
-        int lowStockCount = (int) all.stream().filter(p -> p.getQuantity() > 0 && p.getQuantity() < 10).count();
-        int outOfStock    = (int) all.stream().filter(p -> p.getQuantity() == 0).count();
-        int totalUnits    = all.stream().mapToInt(Product::getQuantity).sum();
+        VBox content = new VBox(0, topbar, stats, tabBar, toolbar, tableWrap);
+        content.getStyleClass().add("main-content");
 
-        HBox kpiRow = new HBox(16,
-                kpiCard("📦", "Total Products",  String.valueOf(totalProducts)),
-                kpiCard("📊", "Total Units",     String.valueOf(totalUnits)),
-                kpiCard("⚠",  "Low Stock",       String.valueOf(lowStockCount)),
-                kpiCard("🚫", "Out of Stock",    String.valueOf(outOfStock))
-        );
-        kpiRow.getChildren().forEach(n -> HBox.setHgrow(n, Priority.ALWAYS));
-
-        VBox body = new VBox(16,
-                kpiRow,
-                surfaceCard(
-                        sectionTitle("Operational inventory", "Browse, update stock and manage products.", "📦"),
-                        Ui.toolbar(search, addProduct, addStock, adjust, delete)
-                ),
-                surfaceCard(table)
-        );
-        body.getStyleClass().add("dash-body");
-        setContent("Inventory", body);
+        ScrollPane pageScroll = new ScrollPane(content);
+        pageScroll.getStyleClass().add("manager-page-scroll");
+        pageScroll.setFitToWidth(true);
+        pageScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        pageScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        root.setCenter(pageScroll);
     }
 
-    /** Low stock alerts page */
-    private void showLowStock() {
-        selectNav("Low Stock");
+    private List<Product> filteredProducts(String search, String filter) {
+        return controller.products(search).stream()
+                .filter(p -> switch (filter) {
+                    case "in" -> p.getQuantity() > 0;
+                    case "low" -> p.getQuantity() > 0 && p.getQuantity() <= 5;
+                    case "obsolete" -> p.getQuantity() == 0;
+                    default -> true;
+                })
+                .toList();
+    }
 
-        List<Product> lowProducts = controller.lowStock();
-
-        // Overview mini-cards
-        int criticalCount = (int) lowProducts.stream().filter(p -> p.getQuantity() == 0).count();
-        int warningCount  = lowProducts.size() - criticalCount;
-
-        HBox kpiRow = new HBox(16,
-                kpiCard("⚠",  "Low Stock Alerts", String.valueOf(lowProducts.size())),
-                kpiCard("🚫", "Out of Stock",      String.valueOf(criticalCount)),
-                kpiCard("🟡", "Low but in Stock",  String.valueOf(warningCount))
-        );
-        kpiRow.getChildren().forEach(n -> HBox.setHgrow(n, Priority.ALWAYS));
-
-        // Alert cards grid
-        FlowPane grid = new FlowPane(16, 16);
-        grid.getStyleClass().add("catalog-grid");
-        if (lowProducts.isEmpty()) {
-            Label empty = new Label("✅  All products are well stocked!");
-            empty.getStyleClass().add("subtitle");
-            grid.getChildren().add(empty);
-        } else {
-            lowProducts.forEach(p -> grid.getChildren().add(lowStockCard(p)));
+    private void refreshProductPage(TableView<Product> table, Pagination pagination, List<Product> products) {
+        int pageCount = Math.max(1, (int) Math.ceil(products.size() / (double) PRODUCT_PAGE_SIZE));
+        if (pagination.getPageCount() != pageCount) {
+            pagination.setPageCount(pageCount);
         }
 
-        ScrollPane scroll = new ScrollPane(grid);
-        scroll.setFitToWidth(true);
-        scroll.getStyleClass().add("admin-page-scroll");
+        int pageIndex = Math.min(pagination.getCurrentPageIndex(), pageCount - 1);
+        if (pageIndex != pagination.getCurrentPageIndex()) {
+            pagination.setCurrentPageIndex(pageIndex);
+        }
 
-        VBox body = new VBox(16,
-                kpiRow,
-                surfaceCard(sectionTitle("Low stock alerts", "Products that need restocking attention.", "⚠"), scroll)
-        );
-        body.getStyleClass().add("dash-body");
-        setContent("Low Stock", body);
+        int from = pageIndex * PRODUCT_PAGE_SIZE;
+        int to = Math.min(from + PRODUCT_PAGE_SIZE, products.size());
+        table.setItems(FXCollections.observableArrayList(products.subList(from, to)));
     }
 
-    /** Stock history page */
+    private HBox buildStatsRow(List<Product> products) {
+        int total   = products.size();
+        long low    = products.stream().filter(p -> p.getQuantity() > 0 && p.getQuantity() <= 5).count();
+        long out    = products.stream().filter(p -> p.getQuantity() == 0).count();
+        int inStock = (int)(total - out);
+
+        HBox row = new HBox(16);
+        row.getStyleClass().add("stats-row");
+        row.getChildren().addAll(
+                statCard("Total products", String.valueOf(total), inStock + " in stock",     "badge-blue"),
+                statCard("Low stock",      String.valueOf(low),   "Need restock",             "badge-amber"),
+                statCard("In stock",       String.valueOf(inStock),"All good",                "badge-green"),
+                statCard("Out of stock",   String.valueOf(out),   out > 0 ? "Action required" : "None",
+                        out > 0 ? "badge-red" : "badge-green")
+        );
+        return row;
+    }
+
+    private VBox statCard(String labelText, String value, String badge, String badgeStyle) {
+        Label lbl = new Label(labelText);
+        lbl.getStyleClass().add("stat-label");
+        Label val = new Label(value);
+        val.getStyleClass().add("stat-value");
+        Label bdg = new Label(badge);
+        bdg.getStyleClass().addAll("stat-badge", badgeStyle);
+
+        VBox card = new VBox(8, lbl, val, bdg);
+        card.getStyleClass().addAll("stat-card", badgeStyle.replace("badge-", "stat-card-"));
+        HBox.setHgrow(card, Priority.ALWAYS);
+        return card;
+    }
+
+    private HBox buildTabBar(String activeFilter, Consumer<String> onFilter) {
+        HBox bar = new HBox(0);
+        bar.getStyleClass().add("tab-bar");
+        bar.setAlignment(Pos.CENTER_LEFT);
+        String[][] tabs = {
+                {"all", "All products"},
+                {"in", "In stock"},
+                {"low", "Low stock"},
+                {"obsolete", "Obsolete"}
+        };
+        for (String[] item : tabs) {
+            Label tab = new Label(item[1]);
+            tab.getStyleClass().add("tab");
+            if (item[0].equals(activeFilter)) {
+                tab.getStyleClass().add("tab-active");
+            }
+            tab.setOnMouseClicked(e -> {
+                bar.getChildren().forEach(node -> node.getStyleClass().remove("tab-active"));
+                tab.getStyleClass().add("tab-active");
+                onFilter.accept(item[0]);
+            });
+            bar.getChildren().add(tab);
+        }
+        return bar;
+    }
+
+    private TableView<Product> buildProductTable() {
+        TableView<Product> table = new TableView<>();
+        table.getStyleClass().add("modern-table");
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
+        table.setFixedCellSize(78);
+        table.setPrefHeight(575);
+        table.setMinHeight(575);
+        table.setMaxHeight(575);
+
+
+        // Product (name + SKU)
+        TableColumn<Product, String> nameCol = new TableColumn<>("Product");
+        nameCol.setMinWidth(390);
+        nameCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getName()));
+        nameCol.setCellFactory(col -> new TableCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setGraphic(null); setText(null); return; }
+                Product p = getTableView().getItems().get(getIndex());
+                Label nm  = new Label(p.getName());
+                nm.setWrapText(true);
+                nm.getStyleClass().add("cell-name");
+                Label sku = new Label("SKU #" + String.format("%06d", p.getId())); sku.getStyleClass().add("cell-sub");
+                nm.setMaxWidth(450);
+                VBox text = new VBox(3, nm, sku);
+                HBox row = new HBox(text);
+                HBox.setHgrow(text, Priority.ALWAYS);
+                row.setAlignment(Pos.CENTER_LEFT);
+                setGraphic(row); setText(null);
+            }
+        });
+
+        // Category pill
+        TableColumn<Product, String> catCol = new TableColumn<>("Category");
+        catCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getCategoryName()));
+        catCol.setMaxWidth(170); catCol.setMinWidth(150);
+        catCol.setCellFactory(col -> new TableCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setGraphic(null); setText(null); return; }
+                Label pill = new Label(item);
+                pill.getStyleClass().addAll("category-pill", categoryStyle(item));
+                setGraphic(pill); setText(null);
+            }
+        });
+
+        // Price
+        TableColumn<Product, String> priceCol = new TableColumn<>("Price");
+        priceCol.setCellValueFactory(d -> new SimpleStringProperty("$" + d.getValue().getPrice()));
+        priceCol.setMaxWidth(100); priceCol.setMinWidth(80);
+        priceCol.setCellFactory(col -> new TableCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setText(null); return; }
+                setText(item); getStyleClass().add("cell-price");
+            }
+        });
+
+        // Quantity bar
+        TableColumn<Product, String> qtyCol = new TableColumn<>("Quantity");
+        qtyCol.setCellValueFactory(d -> new SimpleStringProperty(String.valueOf(d.getValue().getQuantity())));
+        qtyCol.setMaxWidth(160); qtyCol.setMinWidth(120);
+        qtyCol.setCellFactory(col -> new TableCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setGraphic(null); setText(null); return; }
+                int qty = Integer.parseInt(item);
+
+                Region bar = new Region();
+                double pct = Math.min((double) qty / 100, 1.0);
+                bar.setPrefWidth(88 * pct);
+                bar.setPrefHeight(4);
+                bar.getStyleClass().add("qty-bar");
+                bar.getStyleClass().add(qtyBarStyle(qty));
+
+                StackPane bg = new StackPane(bar);
+                bg.getStyleClass().add("qty-bar-bg");
+                bg.setPrefSize(88, 4); bg.setAlignment(Pos.CENTER_LEFT);
+
+                Label num = new Label(item);
+                num.getStyleClass().add("qty-num");
+                num.getStyleClass().add(qtyTextStyle(qty));
+
+                HBox hb = new HBox(12, bg, num); hb.setAlignment(Pos.CENTER_LEFT);
+                setGraphic(hb); setText(null);
+            }
+        });
+
+        // Actions
+        TableColumn<Product, Void> actCol = new TableColumn<>("Actions");
+        actCol.setMaxWidth(130); actCol.setMinWidth(100);
+        actCol.setCellFactory(col -> new TableCell<>() {
+            private final Button edit = makeIconBtn("✎", "Edit product");
+            private final Button del  = makeIconBtn("×", "Delete product");
+            { del.getStyleClass().add("icon-btn-danger"); }
+            @Override protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) { setGraphic(null); return; }
+                edit.setOnAction(e -> {
+                    productDialog(getTableView().getItems().get(getIndex()));
+                    getTableView().refresh();
+                });
+                del.setOnAction(e -> {
+                    Product p = getTableView().getItems().get(getIndex());
+                    if (confirmDialog("Delete", "Delete \"" + p.getName() + "\"?")) {
+                        runAction(() -> controller.deleteProduct(p));
+                        getTableView().getItems().remove(p);
+                    }
+                });
+                HBox hb = new HBox(6, edit, del); hb.setAlignment(Pos.CENTER_LEFT);
+                setGraphic(hb);
+            }
+        });
+
+        table.getColumns().addAll(nameCol, catCol, priceCol, qtyCol, actCol);
+        return table;
+    }
+
+    private String categoryStyle(String category) {
+        if (category == null || category.isBlank()) return "category-pill-blue";
+        return switch (category.trim()) {
+            case "Accessoires"  -> "category-pill-amber";
+            case "Electronics"  -> "category-pill-purple";
+            case "Ensembles"    -> "category-pill-teal";
+            case "Fashion"      -> "category-pill-pink";
+            case "Home"         -> "category-pill-green";
+            case "Lingerie"     -> "category-pill-rose";
+            case "Office"       -> "category-pill-indigo";
+            case "Pantalons"    -> "category-pill-orange";
+            case "Robes"        -> "category-pill-cyan";
+            case "Sports"       -> "category-pill-lime";
+            case "Tops & T-shirts" -> "category-pill-blue";
+            default             -> "category-pill-blue";
+        };
+    }
+
+    private String qtyBarStyle(int qty) {
+        if (qty <= 3) return "qty-bar-red";
+        if (qty <= 10) return "qty-bar-amber";
+        if (qty >= 60) return "qty-bar-green";
+        return "qty-bar-blue";
+    }
+
+    private String qtyTextStyle(int qty) {
+        if (qty <= 3) return "qty-red";
+        if (qty <= 10) return "qty-amber";
+        if (qty >= 60) return "qty-green";
+        return "qty-blue";
+    }
+
+    // ═══════════════════════════════════════════════
+    //  LOW STOCK PAGE
+    // ═══════════════════════════════════════════════
+
+    private void showLowStock() {
+        selectNav("Low Stock");
+        List<Product> lowProducts = controller.lowStock();
+
+        HBox topbar = managerTopbar(
+                "Low stock alerts",
+                "Prioritize restock actions before products go unavailable."
+        );
+
+        long out = lowProducts.stream().filter(p -> p.getQuantity() == 0).count();
+        HBox overview = new HBox(16,
+                statCard("Alert products", String.valueOf(lowProducts.size()), "Needs review", "badge-amber"),
+                statCard("Out of stock", String.valueOf(out), out > 0 ? "Urgent" : "Clear", out > 0 ? "badge-red" : "badge-green"),
+                statCard("Restock queue", String.valueOf(Math.max(0, lowProducts.size() - out)), "Ready to receive", "badge-blue")
+        );
+        overview.getStyleClass().add("stats-row");
+
+        FlowPane alerts = new FlowPane(16, 16);
+        alerts.getStyleClass().add("low-stock-content");
+        alerts.setPadding(new Insets(18, 28, 24, 28));
+
+        if (lowProducts.isEmpty()) {
+            Label emptyTitle = new Label("Stock health is good");
+            emptyTitle.getStyleClass().add("empty-title");
+            Label emptyCopy = new Label("No product needs restock right now.");
+            emptyCopy.getStyleClass().add("empty-copy");
+            VBox empty = new VBox(8, emptyTitle, emptyCopy);
+            empty.getStyleClass().add("empty-state-card");
+            alerts.getChildren().add(empty);
+        }
+
+        lowProducts.forEach(p -> {
+            Label cat  = new Label(p.getCategoryName()); cat.getStyleClass().add("category-pill");
+            Label name = new Label(p.getName());          name.getStyleClass().add("cell-name"); name.setWrapText(true);
+            Label sku  = new Label("SKU #" + String.format("%06d", p.getId())); sku.getStyleClass().add("cell-sub");
+            Label qty  = new Label(p.getQuantity() == 0 ? "Out of stock" : "Only " + p.getQuantity() + " left");
+            qty.getStyleClass().addAll("alert-status", p.getQuantity() == 0 ? "alert-status-red" : "alert-status-amber");
+
+            Button add = styledBtn("+ Add stock", "btn-secondary");
+            Button adjust = styledBtn("Adjust", "btn-secondary");
+            add.setOnAction(e -> stockDialog(p, false, this::showLowStock));
+            adjust.setOnAction(e -> stockDialog(p, true, this::showLowStock));
+
+            HBox actions = new HBox(8, add, adjust);
+            VBox card = new VBox(10, cat, name, sku, qty, actions);
+            card.getStyleClass().add("alert-card");
+            alerts.getChildren().add(card);
+        });
+
+        VBox content = new VBox(0, topbar, overview, alerts);
+        content.getStyleClass().add("main-content");
+
+        ScrollPane scroll = new ScrollPane(content);
+        scroll.getStyleClass().add("manager-page-scroll");
+        scroll.setFitToWidth(true);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        root.setCenter(scroll);
+    }
+
+    // ═══════════════════════════════════════════════
+    //  HISTORY PAGE
+    // ═══════════════════════════════════════════════
+
     private void showHistory() {
         selectNav("Stock History");
+        List<StockMovement> history = controller.history();
+        long in = history.stream().filter(m -> m.getType().name().equalsIgnoreCase("IN")).count();
+        long out = history.stream().filter(m -> m.getType().name().equalsIgnoreCase("OUT")).count();
+        long adjust = history.size() - in - out;
+        final String[] activeFilter = {"all"};
 
-        List<StockMovement> movements = controller.history();
-
-        // Overview stats — compare by type name to avoid compile errors if enum values differ
-        long deliveries  = movements.stream().filter(m -> "DELIVERY".equals(m.getType().name())).count();
-        long adjustments = movements.stream().filter(m -> "ADJUSTMENT".equals(m.getType().name())).count();
-        long sales       = movements.stream().filter(m -> "SALE".equals(m.getType().name())).count();
-
-        HBox kpiRow = new HBox(16,
-                kpiCard("📋", "Total Movements", String.valueOf(movements.size())),
-                kpiCard("🚚", "Deliveries",       String.valueOf(deliveries)),
-                kpiCard("✏",  "Adjustments",      String.valueOf(adjustments)),
-                kpiCard("🛒", "Sales",             String.valueOf(sales))
+        HBox topbar = managerTopbar(
+                "Stock history",
+                "Audit incoming deliveries, outgoing stock, and manual quantity changes."
         );
-        kpiRow.getChildren().forEach(n -> HBox.setHgrow(n, Priority.ALWAYS));
 
-        TableView<StockMovement> table = historyTable();
-        table.setItems(FXCollections.observableArrayList(movements));
-
-        VBox body = new VBox(16,
-                kpiRow,
-                surfaceCard(sectionTitle("Stock movements", "Full audit trail of every stock change.", "📋"), table)
+        HBox overview = new HBox(16,
+                statCard("Movements", String.valueOf(history.size()), "Total records", "badge-blue"),
+                statCard("Stock in", String.valueOf(in), "Received", "badge-green"),
+                statCard("Stock out", String.valueOf(out), "Removed", "badge-red"),
+                statCard("Adjustments", String.valueOf(adjust), "Manual edits", "badge-amber")
         );
-        body.getStyleClass().add("dash-body");
-        setContent("Stock History", body);
+        overview.getStyleClass().add("stats-row");
+
+        TableView<StockMovement> table = new TableView<>();
+        table.getStyleClass().addAll("modern-table", "history-table");
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
+        table.setPrefHeight(720);
+
+        Pagination historyPagination = new Pagination();
+        historyPagination.getStyleClass().add("table-pagination");
+        refreshHistoryPage(table, historyPagination, filteredHistory(history, activeFilter[0]));
+        historyPagination.currentPageIndexProperty().addListener((o, old, val) ->
+                refreshHistoryPage(table, historyPagination, filteredHistory(history, activeFilter[0])));
+
+        HBox historyTabs = buildHistoryTabBar(activeFilter[0], filter -> {
+            activeFilter[0] = filter;
+            historyPagination.setCurrentPageIndex(0);
+            refreshHistoryPage(table, historyPagination, filteredHistory(history, activeFilter[0]));
+        });
+
+        // Product column
+        TableColumn<StockMovement, String> historyProductCol = strCol("Product", StockMovement::getProductName);
+        historyProductCol.setPrefWidth(590);
+        historyProductCol.setMinWidth(460);
+        historyProductCol.setCellFactory(col -> wrapTextCell());
+        table.getColumns().add(historyProductCol);
+
+        // Type column with colored badge
+        TableColumn<StockMovement, String> typeCol = new TableColumn<>("Type");
+        typeCol.setPrefWidth(170);
+        typeCol.setMinWidth(150);
+        typeCol.setMaxWidth(190);
+        typeCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getType().name()));
+        typeCol.setCellFactory(col -> new TableCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setGraphic(null); setText(null); return; }
+                Label badge = new Label(formatMovementType(item));
+                badge.getStyleClass().add(item.equalsIgnoreCase("IN") ? "type-in"
+                        : item.equalsIgnoreCase("OUT") ? "type-out" : "type-adjust");
+                setGraphic(badge); setText(null);
+            }
+        });
+
+        table.getColumns().add(typeCol);
+        TableColumn<StockMovement, String> qtyHistoryCol = strCol("Quantity", m -> String.valueOf(m.getQuantity()));
+        qtyHistoryCol.setPrefWidth(125);
+        qtyHistoryCol.setMinWidth(110);
+        qtyHistoryCol.setMaxWidth(140);
+        table.getColumns().add(qtyHistoryCol);
+
+        TableColumn<StockMovement, String> dateCol = strCol("Date", m -> m.getDate().toString());
+        dateCol.setPrefWidth(210);
+        dateCol.setMinWidth(190);
+        dateCol.setMaxWidth(230);
+        dateCol.setCellFactory(col -> wrapTextCell());
+        table.getColumns().add(dateCol);
+
+        BorderPane historyTableShell = new BorderPane();
+        historyTableShell.setCenter(table);
+        historyTableShell.setBottom(historyPagination);
+        BorderPane.setMargin(historyPagination, new Insets(10, 0, 0, 0));
+
+        VBox tableWrap = new VBox(0, historyTabs, historyTableShell);
+        tableWrap.getStyleClass().add("table-wrapper");
+
+        VBox content = new VBox(0, topbar, overview, tableWrap);
+        content.getStyleClass().add("main-content");
+
+        ScrollPane scroll = new ScrollPane(content);
+        scroll.getStyleClass().add("manager-page-scroll");
+        scroll.setFitToWidth(true);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        root.setCenter(scroll);
     }
 
     private void showProfile() {
         selectNav("Profile");
         User user = controller.currentUser();
 
-        StackPane avatar = new StackPane(new Label(initials(user.getName())));
+        StackPane avatar = new StackPane(new Label(getInitials(user.getName())));
         avatar.getStyleClass().add("role-profile-avatar");
 
         Label name = new Label(value(user.getName()).toUpperCase());
@@ -412,11 +750,11 @@ public class StockManagerDashboardView {
 
         VBox rows = new VBox(16,
                 profileMenuRow("Contact & Support", "Modifier le nom et le telephone", "C",
-                        () -> setContent("CONTACT", createContactProfilePage())),
+                        () -> setProfileContent("CONTACT", createContactProfilePage())),
                 profileMenuRow("Adresse", profileSubtitle(user.getDeliveryAddress(), "Aucune adresse definie"), "A",
-                        () -> setContent("ADRESSE", createAddressProfilePage())),
+                        () -> setProfileContent("ADRESSE", createAddressProfilePage())),
                 profileMenuRow("Securite du compte", "Compte magasinier actif et protege", "S",
-                        () -> setContent("SECURITE", createSecurityProfilePage()))
+                        () -> setProfileContent("SECURITE", createSecurityProfilePage()))
         );
         rows.setPadding(new Insets(0, 54, 54, 54));
 
@@ -427,7 +765,7 @@ public class StockManagerDashboardView {
         VBox body = new VBox(card);
         body.setAlignment(Pos.TOP_CENTER);
         body.setPadding(new Insets(12, 0, 40, 0));
-        setContent("VOTRE PROFIL", body);
+        setProfileContent("VOTRE PROFIL", body);
     }
 
     private HBox profileMenuRow(String title, String subtitle, String iconText, Runnable action) {
@@ -460,7 +798,7 @@ public class StockManagerDashboardView {
         email.setEditable(false);
         TextField phone = profileInput(value(user.getPhone()), "+212 600 000 000");
 
-        Button save = Ui.primary("Mettre a jour le profil");
+        Button save = new Button("Mettre a jour le profil");
         save.getStyleClass().add("role-profile-wide-save");
         save.setOnAction(e -> saveProfile(name.getText(), phone.getText(), user.getDeliveryAddress(), "Profil mis a jour."));
 
@@ -480,7 +818,7 @@ public class StockManagerDashboardView {
         address.setWrapText(true);
         address.getStyleClass().add("role-profile-area");
 
-        Button save = Ui.primary("Enregistrer l'adresse");
+        Button save = new Button("Enregistrer l'adresse");
         save.getStyleClass().add("role-profile-wide-save");
         save.setOnAction(e -> saveProfile(user.getName(), user.getPhone(), address.getText(), "Adresse mise a jour."));
 
@@ -586,14 +924,65 @@ public class StockManagerDashboardView {
     }
 
     private TextField profileInput(String value, String prompt) {
-        TextField field = Ui.text(prompt);
+        TextField field = field(prompt);
         field.setText(value(value));
         return field;
     }
 
+    private String getInitials(String name) {
+        if (name == null || name.isBlank()) return "?";
+        String[] p = name.trim().split("\\s+");
+        return p.length == 1
+                ? p[0].substring(0, Math.min(2, p[0].length())).toUpperCase()
+                : ("" + p[0].charAt(0) + p[p.length - 1].charAt(0)).toUpperCase();
+    }
+
+    private HBox managerTopbar(String title, String subtitle, Node... actions) {
+        User user = controller.currentUser();
+        VBox titleBlock = new VBox(3,
+                Ui.title(title),
+                Ui.subtitle("Workspace " + user.getRole().name().replace('_', ' ').toLowerCase())
+        );
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox right = new HBox(14);
+        right.setAlignment(Pos.CENTER_RIGHT);
+        if (actions != null) {
+            right.getChildren().addAll(actions);
+        }
+        right.getChildren().addAll(managerHeaderAvatar(user), managerHeaderIdentity(user));
+
+        HBox topbar = new HBox(16, titleBlock, spacer, right);
+        topbar.getStyleClass().add("app-header");
+        topbar.setAlignment(Pos.CENTER_LEFT);
+        topbar.setMaxWidth(Double.MAX_VALUE);
+        VBox.setMargin(topbar, new Insets(32, 28, 18, 28));
+        return topbar;
+    }
+
+    private StackPane managerHeaderAvatar(User user) {
+        StackPane avatar = Ui.avatar(user.getName());
+        avatar.setOnMouseClicked(e -> showProfile());
+        return avatar;
+    }
+
+    private VBox managerHeaderIdentity(User user) {
+        Label name = new Label(value(user.getName()));
+        name.getStyleClass().add("header-name");
+        Label role = new Label(user.getRole().name().replace('_', ' '));
+        role.getStyleClass().add("header-role");
+
+        VBox identity = new VBox(2, name, role);
+        identity.setAlignment(Pos.CENTER_LEFT);
+        identity.setOnMouseClicked(e -> showProfile());
+        return identity;
+    }
+
     private void saveProfile(String name, String phone, String address, String message) {
         if (name == null || name.trim().isEmpty()) {
-            Ui.error(new IllegalArgumentException("Name is required."));
+            errorDialog("Name is required.");
             return;
         }
         User user = controller.currentUser();
@@ -602,471 +991,11 @@ public class StockManagerDashboardView {
         user.setDeliveryAddress(address == null ? null : address.trim());
         try {
             controller.updateProfile(user);
-            Ui.info("Profile", message);
+            successDialog("Profile", message);
             showProfile();
         } catch (RuntimeException ex) {
-            Ui.error(ex);
+            errorDialog(ex.getMessage());
         }
-    }
-
-    // =========================================================
-    // TABLES
-    // =========================================================
-    private TableView<Product> productTable() {
-        TableView<Product> table = new TableView<>();
-        decorateTable(table, 78);
-        table.getColumns().add(productImageColumn());
-        table.getColumns().add(productInfoColumn());
-        table.getColumns().add(productCategoryColumn());
-        table.getColumns().add(productPriceColumn());
-        table.getColumns().add(productStockColumn());
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
-        return table;
-    }
-
-    private TableView<StockMovement> historyTable() {
-        TableView<StockMovement> table = new TableView<>();
-        decorateTable(table, 68);
-        table.getColumns().add(movementProductColumn());
-        table.getColumns().add(movementTypeColumn());
-        table.getColumns().add(movementQuantityColumn());
-        table.getColumns().add(movementDateColumn());
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
-        return table;
-    }
-
-    private void decorateTable(TableView<?> table, double rowHeight) {
-        table.getStyleClass().add("admin-data-table");
-        table.setFixedCellSize(rowHeight);
-    }
-
-    // ── Product table columns ──────────────────────────────────────────────────
-
-    private TableColumn<Product, String> productImageColumn() {
-        TableColumn<Product, String> col = new TableColumn<>("Image");
-        col.setPrefWidth(100);
-        col.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getImageUrl()));
-        col.setCellFactory(c -> new TableCell<>() {
-            @Override
-            protected void updateItem(String imageUrl, boolean empty) {
-                super.updateItem(imageUrl, empty);
-                if (empty) { setGraphic(null); setText(null); return; }
-                StackPane frame = new StackPane();
-                frame.getStyleClass().add("admin-image-frame");
-                frame.setPrefSize(60, 60);
-                ImageView img = new ImageView();
-                img.setFitWidth(52);
-                img.setFitHeight(52);
-                img.setPreserveRatio(true);
-                if (imageUrl != null && !imageUrl.isBlank()) {
-                    try {
-                        img.setImage(new Image(resolveImage(imageUrl), true));
-                        frame.getChildren().add(img);
-                    } catch (Exception ignored) {
-                        frame.getChildren().add(imagePlaceholder());
-                    }
-                } else {
-                    frame.getChildren().add(imagePlaceholder());
-                }
-                setText(null);
-                setGraphic(frame);
-            }
-        });
-        return col;
-    }
-
-    private TableColumn<Product, String> productInfoColumn() {
-        TableColumn<Product, String> col = new TableColumn<>("Product");
-        col.setPrefWidth(280);
-        col.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getName()));
-        col.setCellFactory(c -> new TableCell<>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
-                    setGraphic(null); setText(null); return;
-                }
-                Product p = getTableView().getItems().get(getIndex());
-                Label name = new Label(p.getName());
-                name.getStyleClass().add("admin-product-name");
-                name.setWrapText(true);
-                String desc = (p.getDescription() == null || p.getDescription().isBlank())
-                        ? "No description available" : p.getDescription();
-                Label description = new Label(desc);
-                description.getStyleClass().add("admin-product-description");
-                description.setWrapText(true);
-                description.setMaxWidth(260);
-                VBox content = new VBox(5, name, description);
-                content.setAlignment(Pos.CENTER_LEFT);
-                setText(null);
-                setGraphic(content);
-            }
-        });
-        return col;
-    }
-
-    private TableColumn<Product, String> productCategoryColumn() {
-        TableColumn<Product, String> col = new TableColumn<>("Category");
-        col.setPrefWidth(160);
-        col.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getCategoryName()));
-        col.setCellFactory(c -> new TableCell<>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty) { setGraphic(null); setText(null); return; }
-                Label badge = new Label((item == null || item.isBlank()) ? "Uncategorized" : item);
-                badge.getStyleClass().add("admin-category-badge");
-                setText(null);
-                setGraphic(badge);
-            }
-        });
-        return col;
-    }
-
-    private TableColumn<Product, String> productPriceColumn() {
-        TableColumn<Product, String> col = new TableColumn<>("Price");
-        col.setPrefWidth(120);
-        col.setCellValueFactory(data -> new SimpleStringProperty(
-                data.getValue().getPrice() == null ? "$0.00" : "$" + data.getValue().getPrice()));
-        col.setCellFactory(c -> new TableCell<>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty) { setGraphic(null); setText(null); return; }
-                Label price = new Label(item);
-                price.getStyleClass().add("admin-price-label");
-                setText(null);
-                setGraphic(price);
-            }
-        });
-        return col;
-    }
-
-    private TableColumn<Product, String> productStockColumn() {
-        TableColumn<Product, String> col = new TableColumn<>("Stock");
-        col.setPrefWidth(140);
-        col.setCellValueFactory(data -> new SimpleStringProperty(String.valueOf(data.getValue().getQuantity())));
-        col.setCellFactory(c -> new TableCell<>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()) {
-                    setGraphic(null); setText(null); return;
-                }
-                Product p = getTableView().getItems().get(getIndex());
-                int qty = p.getQuantity();
-                String badgeText  = qty == 0 ? "Out of stock" : qty + " units";
-                String badgeClass = qty <= 5 ? "admin-stock-badge-low" : "admin-stock-badge-ok";
-                Label stock = new Label(badgeText);
-                stock.getStyleClass().add(badgeClass);
-                setText(null);
-                setGraphic(stock);
-            }
-        });
-        return col;
-    }
-
-    // ── History table columns ──────────────────────────────────────────────────
-
-    private TableColumn<StockMovement, String> movementProductColumn() {
-        TableColumn<StockMovement, String> col = new TableColumn<>("Product");
-        col.setPrefWidth(260);
-        col.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getProductName()));
-        col.setCellFactory(c -> new TableCell<>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) { setGraphic(null); setText(null); return; }
-                // Avatar circle with initials
-                Label avatar = new Label(initials(item));
-                avatar.getStyleClass().add("admin-user-avatar");
-                Label name = new Label(item);
-                name.getStyleClass().add("admin-product-name");
-                name.setWrapText(true);
-                HBox row = new HBox(10, avatar, name);
-                row.setAlignment(Pos.CENTER_LEFT);
-                setText(null);
-                setGraphic(row);
-            }
-        });
-        return col;
-    }
-
-    private TableColumn<StockMovement, String> movementTypeColumn() {
-        TableColumn<StockMovement, String> col = new TableColumn<>("Type");
-        col.setPrefWidth(160);
-        col.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getType().name()));
-        col.setCellFactory(c -> new TableCell<>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) { setGraphic(null); setText(null); return; }
-                Label badge = new Label(item.replace('_', ' '));
-                badge.getStyleClass().add("admin-role-badge");
-                setText(null);
-                setGraphic(badge);
-            }
-        });
-        return col;
-    }
-
-    private TableColumn<StockMovement, String> movementQuantityColumn() {
-        TableColumn<StockMovement, String> col = new TableColumn<>("Quantity");
-        col.setPrefWidth(120);
-        col.setCellValueFactory(data -> new SimpleStringProperty(String.valueOf(data.getValue().getQuantity())));
-        col.setCellFactory(c -> new TableCell<>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) { setGraphic(null); setText(null); return; }
-                int qty = Integer.parseInt(item);
-                Label label = new Label((qty >= 0 ? "+" : "") + qty + " units");
-                label.getStyleClass().add(qty >= 0 ? "admin-stock-badge-ok" : "admin-stock-badge-low");
-                setText(null);
-                setGraphic(label);
-            }
-        });
-        return col;
-    }
-
-    private TableColumn<StockMovement, String> movementDateColumn() {
-        TableColumn<StockMovement, String> col = new TableColumn<>("Date");
-        col.setPrefWidth(180);
-        col.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getDate().toString()));
-        col.setCellFactory(c -> new TableCell<>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) { setGraphic(null); setText(null); return; }
-                Label label = new Label(item);
-                label.getStyleClass().add("admin-user-id");
-                setText(null);
-                setGraphic(label);
-            }
-        });
-        return col;
-    }
-
-    // =========================================================
-    // DIALOGS
-    // =========================================================
-    private void productDialog(Product product) {
-        TextField name        = Ui.text("Name");
-        TextField description = Ui.text("Description");
-        TextField imageUrl    = Ui.text("Image URL or /images/... path");
-        TextField price       = Ui.text("Price");
-        TextField quantity    = Ui.text("Quantity");
-        ComboBox<Category> category = new ComboBox<>(FXCollections.observableArrayList(controller.categories()));
-        category.setPromptText("Category");
-        category.setMaxWidth(Double.MAX_VALUE);
-
-        if (product != null) {
-            name.setText(product.getName());
-            description.setText(product.getDescription());
-            imageUrl.setText(product.getImageUrl());
-            price.setText(String.valueOf(product.getPrice()));
-            quantity.setText(String.valueOf(product.getQuantity()));
-            category.getItems().stream()
-                    .filter(cat -> cat.getId() == product.getCategoryId())
-                    .findFirst()
-                    .ifPresent(category::setValue);
-        }
-
-        Dialog<Void> dialog = new Dialog<>();
-        dialog.setTitle(product == null ? "New Product" : "Edit Product");
-
-        Button save = Ui.primary(product == null ? "Create product" : "Save changes");
-        save.setMaxWidth(Double.MAX_VALUE);
-        save.setOnAction(e -> {
-            Category selected = category.getValue();
-            Product next = new Product(
-                    product == null ? 0 : product.getId(),
-                    name.getText(), description.getText(), imageUrl.getText(),
-                    new BigDecimal(price.getText()), Integer.parseInt(quantity.getText()),
-                    selected == null ? 0 : selected.getId(),
-                    selected == null ? "" : selected.getName()
-            );
-            run(() -> controller.saveProduct(next));
-            dialog.close();
-        });
-
-        // Dialog layout matching admin style
-        Label overline = new Label("STOCK FORM");
-        overline.getStyleClass().add("admin-dialog-overline");
-        Label badge = new Label(product == null ? "NEW" : "EDIT");
-        badge.getStyleClass().add("admin-dialog-badge");
-        HBox topRow = new HBox(10, overline, badge);
-        topRow.setAlignment(Pos.CENTER_LEFT);
-
-        Label heading = new Label(product == null ? "Add a new product" : "Edit product details");
-        heading.getStyleClass().add("admin-dialog-title");
-        Label copy = new Label("Fill in the fields below to " + (product == null ? "create" : "update") + " a product in the catalogue.");
-        copy.getStyleClass().add("admin-dialog-subtitle");
-        copy.setWrapText(true);
-
-        Region divider = new Region();
-        divider.getStyleClass().add("admin-dialog-divider");
-        divider.setPrefHeight(1);
-
-        VBox form = new VBox(16,
-                topRow, heading, copy, divider,
-                dialogField("Name", name),
-                dialogField("Description", description),
-                dialogField("Image URL", imageUrl),
-                new HBox(16, dialogField("Price", price), dialogField("Quantity", quantity)),
-                dialogField("Category", category),
-                save
-        );
-        ((HBox) form.getChildren().get(7)).getChildren().forEach(n -> HBox.setHgrow(n, Priority.ALWAYS));
-        form.getStyleClass().add("admin-dialog-card");
-        form.setPadding(new Insets(24));
-
-        dialog.getDialogPane().setContent(form);
-        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
-        dialog.showAndWait();
-    }
-
-    private void stockDialog(Product product, boolean adjust, TableView<Product> table, TextField search) {
-        if (product == null) {
-            Ui.info("Choose product", "Select a product first.");
-            return;
-        }
-
-        TextField qty = Ui.text(adjust ? "New quantity" : "Received quantity");
-
-        Dialog<Void> dialog = new Dialog<>();
-        dialog.setTitle(adjust ? "Adjust stock" : "Validate delivery");
-
-        Button save = Ui.primary(adjust ? "Adjust" : "Validate delivery");
-        save.setMaxWidth(Double.MAX_VALUE);
-        save.setOnAction(e -> {
-            int value = Integer.parseInt(qty.getText());
-            run(() -> {
-                if (adjust) controller.adjustStock(product, value);
-                else        controller.addStock(product, value);
-            });
-            table.setItems(FXCollections.observableArrayList(controller.products(search.getText())));
-            dialog.close();
-        });
-
-        Label overline = new Label("STOCK OPERATION");
-        overline.getStyleClass().add("admin-dialog-overline");
-        Label badge = new Label(adjust ? "ADJUST" : "DELIVERY");
-        badge.getStyleClass().add("admin-dialog-badge");
-        HBox topRow = new HBox(10, overline, badge);
-        topRow.setAlignment(Pos.CENTER_LEFT);
-
-        Label heading = new Label(product.getName());
-        heading.getStyleClass().add("admin-dialog-title");
-        Label copy = new Label(adjust
-                ? "Enter the new total quantity for this product."
-                : "Enter the quantity received in this delivery.");
-        copy.getStyleClass().add("admin-dialog-subtitle");
-        copy.setWrapText(true);
-
-        Region divider = new Region();
-        divider.getStyleClass().add("admin-dialog-divider");
-        divider.setPrefHeight(1);
-
-        // Current stock badge
-        String badgeClass = product.getQuantity() == 0 ? "dash-badge-out"
-                : product.getQuantity() < 10 ? "dash-badge-low" : "dash-badge-ok";
-        Label currentBadge = new Label("Current stock: " + product.getQuantity());
-        currentBadge.getStyleClass().addAll("dash-stock-badge", badgeClass);
-
-        VBox form = new VBox(16,
-                topRow, heading, copy, currentBadge, divider,
-                dialogField(adjust ? "New quantity" : "Received quantity", qty),
-                save
-        );
-        form.getStyleClass().add("admin-dialog-card");
-        form.setPadding(new Insets(24));
-
-        dialog.getDialogPane().setContent(form);
-        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
-        dialog.showAndWait();
-    }
-
-    // =========================================================
-    // LOW STOCK CARD
-    // =========================================================
-    private VBox lowStockCard(Product p) {
-        Label catLabel = new Label(p.getCategoryName() == null ? "—" : p.getCategoryName());
-        catLabel.getStyleClass().add("dash-product-category");
-
-        Label nameLabel = new Label(p.getName());
-        nameLabel.getStyleClass().add("dash-product-name");
-        nameLabel.setWrapText(true);
-
-        String badgeText  = p.getQuantity() == 0 ? "Out of Stock" : "Low — " + p.getQuantity() + " left";
-        String badgeClass = p.getQuantity() == 0 ? "dash-badge-out" : "dash-badge-low";
-        Label badge = new Label(badgeText);
-        badge.getStyleClass().addAll("dash-stock-badge", badgeClass);
-
-        // Progress bar
-        double ratio = Math.min(1.0, p.getQuantity() / 20.0);
-        HBox track = new HBox();
-        track.getStyleClass().add("dash-progress-track");
-        Region fill = new Region();
-        fill.getStyleClass().addAll("dash-progress-fill", p.getQuantity() == 0 ? "out" : "low");
-        fill.prefWidthProperty().bind(track.widthProperty().multiply(ratio));
-        track.getChildren().add(fill);
-
-        VBox card = new VBox(10, catLabel, nameLabel, badge, track);
-        card.getStyleClass().add("dash-product-card");
-        card.setPrefWidth(260);
-        return card;
-    }
-
-    // =========================================================
-    // KPI CARD
-    // =========================================================
-    private VBox kpiCard(String icon, String label, String value) {
-        Label iconLabel = new Label(icon);
-        iconLabel.getStyleClass().addAll("dash-kpi-icon", "blue");
-
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        HBox top = new HBox(8, iconLabel, spacer);
-        top.setAlignment(Pos.CENTER_LEFT);
-
-        Label labelNode = new Label(label);
-        labelNode.getStyleClass().add("dash-kpi-label");
-
-        Label valueNode = new Label(value);
-        valueNode.getStyleClass().add("dash-kpi-value");
-
-        VBox card = new VBox(10, top, labelNode, valueNode);
-        card.getStyleClass().add("dash-kpi-card");
-        return card;
-    }
-
-    // =========================================================
-    // CELL HELPERS
-    // =========================================================
-    private String resolveImage(String imageUrl) {
-        if (imageUrl == null || imageUrl.isBlank()) return "";
-        if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://") || imageUrl.startsWith("file:"))
-            return imageUrl;
-        if (imageUrl.startsWith("/")) {
-            var resource = getClass().getResource(imageUrl);
-            if (resource != null) return resource.toExternalForm();
-        }
-        return new java.io.File(imageUrl).toURI().toString();
-    }
-
-    private Label imagePlaceholder() {
-        Label placeholder = new Label("IMG");
-        placeholder.getStyleClass().add("admin-image-placeholder");
-        return placeholder;
-    }
-
-    private String initials(String name) {
-        if (name == null || name.isBlank()) return "?";
-        String[] parts = name.trim().split("\\s+");
-        if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
-        return (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1)).toUpperCase();
     }
 
     private VBox profileField(String labelText, Node field) {
@@ -1116,28 +1045,6 @@ public class StockManagerDashboardView {
         }
     }
 
-    private TextField profileReadonly(String value) {
-        TextField field = new TextField(value(value));
-        field.setEditable(false);
-        field.setFocusTraversable(false);
-        field.getStyleClass().add("role-profile-readonly");
-        return field;
-    }
-
-    private VBox profileFact(String label, String value) {
-        Label l = new Label(label);
-        l.getStyleClass().add("role-profile-fact-label");
-        Label v = new Label(value(value));
-        v.getStyleClass().add("role-profile-fact-value");
-        return new VBox(2, l, v);
-    }
-
-    private Label profileChip(String text) {
-        Label chip = new Label(text);
-        chip.getStyleClass().add("role-profile-chip");
-        return chip;
-    }
-
     private String value(String text) {
         return text == null ? "" : text;
     }
@@ -1146,65 +1053,492 @@ public class StockManagerDashboardView {
         return value == null || value.isBlank() ? fallback : value;
     }
 
-    // =========================================================
-    // LAYOUT HELPERS
-    // =========================================================
-    private void setContent(String title, Node content) {
-        VBox page = new VBox(18, Ui.header(controller.currentUser(), title), content);
-        page.setPadding(new Insets(28));
+    private void setProfileContent(String title, Node content) {
+        VBox page = new VBox(0, managerTopbar(title, ""), content);
+        page.getStyleClass().add("main-content");
         VBox.setVgrow(content, Priority.ALWAYS);
 
         ScrollPane scrollPane = new ScrollPane(page);
         scrollPane.setFitToWidth(true);
         scrollPane.setFitToHeight(false);
-        scrollPane.getStyleClass().add("admin-page-scroll");
+        scrollPane.getStyleClass().add("manager-page-scroll");
         root.setCenter(scrollPane);
     }
-
-    private VBox surfaceCard(Node... nodes) {
-        VBox card = new VBox(16, nodes);
-        card.getStyleClass().add("admin-surface-card");
-        card.setPadding(new Insets(20));
-        return card;
-    }
-
-    private VBox sectionTitle(String title, String subtitle, String iconText) {
-        StackPane bubble = new StackPane(new Label(iconText));
-        bubble.getStyleClass().add("admin-icon-bubble");
-
-        Label titleLabel = new Label(title);
-        titleLabel.getStyleClass().add("title");
-
-        HBox titleRow = new HBox(10, bubble, titleLabel);
-        titleRow.setAlignment(Pos.CENTER_LEFT);
-
-        Label s = new Label(subtitle);
-        s.getStyleClass().add("subtitle");
-        s.setWrapText(true);
-        return new VBox(4, titleRow, s);
-    }
-
-    private VBox dialogField(String labelText, Node field) {
-        Label label = new Label(labelText);
-        label.getStyleClass().add("admin-dialog-label");
-        if (field instanceof Region region) {
-            region.setMaxWidth(Double.MAX_VALUE);
+    private void refreshHistoryPage(TableView<StockMovement> table, Pagination pagination, List<StockMovement> movements) {
+        int pageCount = Math.max(1, (int) Math.ceil(movements.size() / (double) HISTORY_PAGE_SIZE));
+        if (pagination.getPageCount() != pageCount) {
+            pagination.setPageCount(pageCount);
         }
-        return new VBox(8, label, field);
+
+        int pageIndex = Math.min(pagination.getCurrentPageIndex(), pageCount - 1);
+        if (pageIndex != pagination.getCurrentPageIndex()) {
+            pagination.setCurrentPageIndex(pageIndex);
+        }
+
+        int from = pageIndex * HISTORY_PAGE_SIZE;
+        int to = Math.min(from + HISTORY_PAGE_SIZE, movements.size());
+        table.setItems(FXCollections.observableArrayList(movements.subList(from, to)));
     }
 
-    private <T> TableColumn<T, String> col(String title, java.util.function.Function<T, String> mapper) {
-        TableColumn<T, String> column = new TableColumn<>(title);
-        column.setCellValueFactory(data -> new SimpleStringProperty(mapper.apply(data.getValue())));
-        return column;
+    private List<StockMovement> filteredHistory(List<StockMovement> history, String filter) {
+        return history.stream()
+                .filter(m -> switch (filter) {
+                    case "in" -> m.getType() == StockMovementType.IN;
+                    case "out" -> m.getType() == StockMovementType.OUT;
+                    case "adjustment" -> m.getType() == StockMovementType.ADJUSTMENT;
+                    default -> true;
+                })
+                .toList();
     }
 
-    private void run(Runnable action) {
+    private HBox buildHistoryTabBar(String activeFilter, Consumer<String> onFilter) {
+        HBox bar = new HBox(10);
+        bar.getStyleClass().add("history-filter-bar");
+        String[][] tabs = {
+                {"all", "All movements"},
+                {"in", "Stock in"},
+                {"out", "Stock out"},
+                {"adjustment", "Adjustments"}
+        };
+        for (String[] item : tabs) {
+            Label tab = new Label(item[1]);
+            tab.getStyleClass().add("history-filter-chip");
+            if (item[0].equals(activeFilter)) {
+                tab.getStyleClass().add("history-filter-active");
+            }
+            tab.setOnMouseClicked(e -> {
+                bar.getChildren().forEach(node -> node.getStyleClass().remove("history-filter-active"));
+                tab.getStyleClass().add("history-filter-active");
+                onFilter.accept(item[0]);
+            });
+            bar.getChildren().add(tab);
+        }
+        return bar;
+    }
+
+    private String formatMovementType(String type) {
+        if (type == null) return "";
+        return switch (type) {
+            case "IN" -> "Stock in";
+            case "OUT" -> "Stock out";
+            case "ADJUSTMENT" -> "Adjusted";
+            default -> type;
+        };
+    }
+
+    // ═══════════════════════════════════════════════
+    //  DIALOGS
+    // ═══════════════════════════════════════════════
+
+    private void productDialog(Product product) {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle(product == null ? "New product" : "Edit product");
+        dialog.getDialogPane().getStylesheets().add(
+                getClass().getResource("/styles/app.css").toExternalForm());
+        dialog.getDialogPane().getStyleClass().add("modern-dialog");
+        dialog.getDialogPane().setPrefWidth(440);
+
+        // ── Fields ──
+        TextField name        = field("ex: Wireless Keyboard");
+        TextField description = field("ex: Imported from...");
+        TextField imageUrl    = field("https://... or /images/...");
+        TextField price       = field("0.00");
+        TextField quantity    = field("0");
+        ComboBox<Category> category = new ComboBox<>(FXCollections.observableArrayList(controller.categories()));
+        category.setPromptText("Select a category");
+        category.getStyleClass().add("modern-combo");
+        category.setMaxWidth(Double.MAX_VALUE);
+        name.setFocusTraversable(false);
+        description.setFocusTraversable(false);
+        imageUrl.setFocusTraversable(false);
+        price.setFocusTraversable(false);
+        quantity.setFocusTraversable(false);
+        category.setFocusTraversable(false);
+
+        if (product != null) {
+            name.setText(product.getName());
+            description.setText(product.getDescription());
+            imageUrl.setText(product.getImageUrl());
+            price.setText(String.valueOf(product.getPrice()));
+            quantity.setText(String.valueOf(product.getQuantity()));
+            category.getItems().stream()
+                    .filter(c -> c.getId() == product.getCategoryId())
+                    .findFirst().ifPresent(category::setValue);
+        }
+
+        // ── Header ──
+        Label title = new Label(product == null ? "New product" : "Edit product");
+        title.getStyleClass().add("dialog-title");
+        title.setWrapText(true);
+        Label sub = new Label(product == null ? "Fill in the details below" : "Update the product information");
+        sub.getStyleClass().add("dialog-subtitle");
+        VBox header = new VBox(4, title, sub);
+        header.getStyleClass().add("dialog-header");
+
+        // ── Separator ──
+        Region sep = new Region();
+        sep.getStyleClass().add("dialog-sep");
+        sep.setPrefHeight(1); sep.setMaxWidth(Double.MAX_VALUE);
+
+        // ── Form rows ──
+        VBox form = new VBox(14,
+                header, sep,
+                fieldRow("Product name", name),
+                fieldRow("Description", description),
+                fieldRow("Image URL", imageUrl),
+                twoColRow(
+                        fieldRow("Price ($)", price),
+                        fieldRow("Quantity", quantity)
+                ),
+                fieldRow("Category", category)
+        );
+        form.setPadding(new Insets(24, 24, 8, 24));
+
+
+        // ── Footer ──
+        Button save = new Button(product == null ? "Create product" : "Save changes");
+        save.getStyleClass().add("btn-primary");
+        save.setMaxWidth(Double.MAX_VALUE);
+        save.setPrefHeight(42);
+
+        Button cancel = new Button("Cancel");
+        cancel.getStyleClass().add("btn-secondary");
+        cancel.setMaxWidth(Double.MAX_VALUE);
+        cancel.setPrefHeight(42);
+        cancel.setOnAction(e -> dialog.close());
+
+        HBox footer = new HBox(10, cancel, save);
+        footer.getStyleClass().add("dialog-footer");
+        HBox.setHgrow(save, Priority.ALWAYS);
+        HBox.setHgrow(cancel, Priority.ALWAYS);
+
+        save.setOnAction(e -> {
+            Category sel = category.getValue();
+            Product next = new Product(product == null ? 0 : product.getId(),
+                    name.getText(), description.getText(), imageUrl.getText(),
+                    new BigDecimal(price.getText()), Integer.parseInt(quantity.getText()),
+                    sel == null ? 0 : sel.getId(), sel == null ? "" : sel.getName());
+            runAction(() -> controller.saveProduct(next));
+            dialog.close();
+        });
+
+        VBox root = new VBox(0, form, footer);
+        dialog.getDialogPane().setContent(root);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        dialog.getDialogPane().lookupButton(ButtonType.CLOSE).setVisible(false);
+        dialog.showAndWait();
+    }
+
+    // helpers pour le dialog
+    private VBox fieldRow(String label, javafx.scene.Node input) {
+        Label lbl = new Label(label);
+        lbl.getStyleClass().add("field-label");
+        return new VBox(5, lbl, input);
+    }
+
+    private HBox twoColRow(VBox left, VBox right) {
+        HBox row = new HBox(12, left, right);
+        HBox.setHgrow(left, Priority.ALWAYS);
+        HBox.setHgrow(right, Priority.ALWAYS);
+        return row;
+    }
+    private void stockDialog(Product product, boolean adjust, Runnable onSaved) {
+        if (product == null) { infoDialog("Select a product", "Please select a product first."); return; }
+
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("");
+        dialog.getDialogPane().getStylesheets().add(
+                getClass().getResource("/styles/app.css").toExternalForm());
+        dialog.getDialogPane().getStyleClass().add("confirm-dialog");
+        dialog.getDialogPane().setPrefWidth(420);
+
+        // ── Hero ──
+        Label icon = new Label(adjust ? "⚖" : "📥");
+        icon.setStyle("-fx-font-size: 30px; -fx-background-color: #dbeafe; -fx-background-radius: 999; -fx-min-width: 68; -fx-min-height: 68; -fx-max-width: 68; -fx-max-height: 68; -fx-alignment: CENTER;");
+
+        Label lAction = new Label(adjust ? "Adjust quantity" : "Add stock");
+        lAction.setStyle("-fx-font-size: 18px; -fx-font-weight: 900; -fx-text-fill: #0f172a;");
+
+        Label lName = new Label(product.getName());
+        lName.setStyle("-fx-font-size: 13px; -fx-text-fill: #64748b;");
+        lName.setWrapText(true);
+        lName.setMaxWidth(360);
+
+
+
+        VBox heroText = new VBox(6, lAction, lName);
+        heroText.setAlignment(Pos.CENTER);
+
+        VBox hero = new VBox(14, icon, heroText);
+        hero.setAlignment(Pos.CENTER);
+        hero.setStyle("-fx-background-color: white; -fx-padding: 32 28 20 28;");
+
+        // ── Field ──
+        Label fieldLabel = new Label(adjust ? "New quantity" : "Received quantity");
+        fieldLabel.setStyle("-fx-font-size: 12px; -fx-font-weight: 900; -fx-text-fill: #64748b;");
+
+        TextField qty = new TextField();
+        qty.setPromptText(adjust ? "Enter new quantity..." : "Enter received quantity...");
+        qty.getStyleClass().add("modern-field");
+        qty.setMaxWidth(Double.MAX_VALUE);
+        qty.setFocusTraversable(false);
+
+        VBox fieldBox = new VBox(6, fieldLabel, qty);
+        fieldBox.setStyle("-fx-background-color: white; -fx-padding: 0 28 20 28;");
+
+        // ── Separator ──
+        Region sep = new Region();
+        sep.setStyle("-fx-background-color: #e8eef5; -fx-pref-height: 1;");
+        sep.setMaxWidth(Double.MAX_VALUE);
+
+        // ── Buttons ──
+        Button cancel = new Button("Cancel");
+        cancel.setStyle("-fx-background-color: white; -fx-text-fill: #475569; -fx-font-size: 14px; -fx-font-weight: 900; -fx-background-radius: 12; -fx-border-color: #cbd5e1; -fx-border-radius: 12; -fx-border-width: 1.5; -fx-pref-height: 42;");
+        cancel.setMaxWidth(Double.MAX_VALUE);
+        cancel.setOnAction(e -> dialog.close());
+
+        String btnColor = "linear-gradient(to right, #2563eb, #1d4ed8)";
+        Button save = new Button(adjust ? "Adjust" : "Validate delivery");
+        save.setStyle("-fx-background-color: " + btnColor + "; -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: 900; -fx-background-radius: 12; -fx-pref-height: 42;");
+        save.setMaxWidth(Double.MAX_VALUE);
+        save.setOnAction(e -> {
+            int value = Integer.parseInt(qty.getText());
+            runAction(() -> { if (adjust) controller.adjustStock(product, value);
+            else controller.addStock(product, value); });
+            onSaved.run();
+            dialog.close();
+        });
+
+        HBox.setHgrow(cancel, Priority.ALWAYS);
+        HBox.setHgrow(save, Priority.ALWAYS);
+        HBox btnRow = new HBox(12, cancel, save);
+        btnRow.setStyle("-fx-background-color: #f8fafc; -fx-padding: 14 24 18 24; -fx-border-color: #e2e8f0 transparent transparent transparent;");
+
+        VBox root = new VBox(0, hero, sep, fieldBox, btnRow);
+        dialog.getDialogPane().setContent(root);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        dialog.getDialogPane().lookupButton(ButtonType.CLOSE).setVisible(false);
+        dialog.showAndWait();
+    }
+    // ═══════════════════════════════════════════════
+    //  HELPERS
+    // ═══════════════════════════════════════════════
+
+    private Button styledBtn(String text, String style) {
+        Button btn = new Button(text); btn.getStyleClass().add(style); return btn;
+    }
+
+    private Button makeIconBtn(String text, String tooltip) {
+        Button btn = new Button(text);
+        btn.getStyleClass().add("icon-btn");
+        btn.setTooltip(new Tooltip(tooltip));
+        return btn;
+    }
+
+    private TextField field(String prompt) {
+        TextField tf = new TextField(); tf.setPromptText(prompt);
+        tf.getStyleClass().add("modern-field"); tf.setMaxWidth(Double.MAX_VALUE); return tf;
+    }
+
+    private <T> TableColumn<T, String> strCol(String title, Function<T, String> mapper) {
+        TableColumn<T, String> col = new TableColumn<>(title);
+        col.setCellValueFactory(d -> new SimpleStringProperty(mapper.apply(d.getValue())));
+        return col;
+    }
+
+    private <T> TableCell<T, String> wrapTextCell() {
+        return new TableCell<>() {
+            private final Label label = new Label();
+            {
+                label.setWrapText(true);
+                label.getStyleClass().add("wrap-cell-label");
+                label.maxWidthProperty().bind(widthProperty().subtract(24));
+            }
+
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setGraphic(null);
+                    setText(null);
+                    return;
+                }
+                label.setText(item);
+                setGraphic(label);
+                setText(null);
+            }
+        };
+    }
+
+    private boolean confirmDialog(String title, String msg) {
+        Dialog<Boolean> dialog = new Dialog<>();
+        dialog.setTitle("");
+        dialog.getDialogPane().getStylesheets().add(
+                getClass().getResource("/styles/app.css").toExternalForm());
+        dialog.getDialogPane().getStyleClass().add("confirm-dialog");
+        dialog.getDialogPane().setPrefWidth(420);
+
+        Label icon = new Label("🗑");
+        icon.getStyleClass().add("confirm-icon");
+
+        Label lTitle = new Label(title);
+        lTitle.getStyleClass().add("confirm-title");
+
+        Label lMsg = new Label(msg);
+        lMsg.getStyleClass().add("confirm-msg");
+        lMsg.setWrapText(true);
+
+        VBox texts = new VBox(6, lTitle, lMsg);
+        texts.setAlignment(Pos.CENTER);
+
+        VBox content = new VBox(16, icon, texts);
+        content.setAlignment(Pos.CENTER);
+        content.getStyleClass().add("confirm-content");
+
+        Button btnCancel = new Button("Cancel");
+        btnCancel.getStyleClass().add("confirm-btn-cancel");
+        btnCancel.setMaxWidth(Double.MAX_VALUE);
+        btnCancel.setPrefHeight(42);
+
+        Button btnDelete = new Button("Yes, delete");
+        btnDelete.getStyleClass().add("confirm-btn-delete");
+        btnDelete.setMaxWidth(Double.MAX_VALUE);
+        btnDelete.setPrefHeight(42);
+
+        HBox.setHgrow(btnCancel, Priority.ALWAYS);
+        HBox.setHgrow(btnDelete, Priority.ALWAYS);
+        HBox btnRow = new HBox(12, btnCancel, btnDelete);
+        btnRow.getStyleClass().add("confirm-btn-row");
+
+        final boolean[] result = {false};
+        btnCancel.setOnAction(e -> dialog.close());
+        btnDelete.setOnAction(e -> { result[0] = true; dialog.close(); });
+
+        VBox root = new VBox(0, content, btnRow);
+        dialog.getDialogPane().setContent(root);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        dialog.getDialogPane().lookupButton(ButtonType.CLOSE).setVisible(false);
+        dialog.showAndWait();
+        return result[0];
+    }
+
+
+
+    private void runAction(Runnable action) {
         try {
             action.run();
-            Ui.info("Done", "Action completed successfully.");
+            successDialog("Done", "Action completed successfully.");
         } catch (RuntimeException e) {
-            Ui.error(e);
+            errorDialog(e.getMessage());
         }
+    }
+
+    private void successDialog(String title, String msg) {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("");
+        dialog.getDialogPane().getStylesheets().add(
+                getClass().getResource("/styles/app.css").toExternalForm());
+        dialog.getDialogPane().getStyleClass().add("confirm-dialog");
+        dialog.getDialogPane().setPrefWidth(380);
+
+        Label icon = new Label("✓");
+        icon.setStyle("-fx-font-size: 28px; -fx-font-weight: 900; -fx-text-fill: #16a34a; -fx-background-color: #dcfce7; -fx-background-radius: 999; -fx-min-width: 68; -fx-min-height: 68; -fx-max-width: 68; -fx-max-height: 68; -fx-alignment: CENTER;");
+
+        Label lTitle = new Label(title);
+        lTitle.setStyle("-fx-font-size: 17px; -fx-font-weight: 900; -fx-text-fill: #0f172a;");
+
+        Label lMsg = new Label(msg);
+        lMsg.setStyle("-fx-font-size: 13px; -fx-text-fill: #64748b;");
+
+        VBox content = new VBox(14, icon, new VBox(6, lTitle, lMsg));
+        content.setAlignment(Pos.CENTER);
+        content.setStyle("-fx-background-color: white; -fx-padding: 34 28 20 28;");
+
+        Button ok = new Button("OK");
+        ok.setStyle("-fx-background-color: linear-gradient(to right, #16a34a, #15803d); -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: 900; -fx-background-radius: 12; -fx-pref-height: 42;");
+        ok.setMaxWidth(Double.MAX_VALUE);
+        ok.setOnAction(e -> dialog.close());
+
+        HBox btnRow = new HBox(ok);
+        btnRow.setStyle("-fx-background-color: #f8fafc; -fx-padding: 14 24 18 24; -fx-border-color: #e2e8f0 transparent transparent transparent;");
+        HBox.setHgrow(ok, Priority.ALWAYS);
+
+        dialog.getDialogPane().setContent(new VBox(0, content, btnRow));
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        dialog.getDialogPane().lookupButton(ButtonType.CLOSE).setVisible(false);
+        dialog.showAndWait();
+    }
+
+    private void errorDialog(String msg) {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("");
+        dialog.getDialogPane().getStylesheets().add(
+                getClass().getResource("/styles/app.css").toExternalForm());
+        dialog.getDialogPane().getStyleClass().add("confirm-dialog");
+        dialog.getDialogPane().setPrefWidth(380);
+
+        Label icon = new Label("✕");
+        icon.setStyle("-fx-font-size: 24px; -fx-font-weight: 900; -fx-text-fill: #dc2626; -fx-background-color: #fee2e2; -fx-background-radius: 999; -fx-min-width: 68; -fx-min-height: 68; -fx-max-width: 68; -fx-max-height: 68; -fx-alignment: CENTER;");
+
+        Label lTitle = new Label("Error");
+        lTitle.setStyle("-fx-font-size: 17px; -fx-font-weight: 900; -fx-text-fill: #0f172a;");
+
+        Label lMsg = new Label(msg);
+        lMsg.setStyle("-fx-font-size: 13px; -fx-text-fill: #64748b;");
+        lMsg.setWrapText(true);
+
+        VBox content = new VBox(14, icon, new VBox(6, lTitle, lMsg));
+        content.setAlignment(Pos.CENTER);
+        content.setStyle("-fx-background-color: white; -fx-padding: 34 28 20 28;");
+
+        Button ok = new Button("OK");
+        ok.setStyle("-fx-background-color: linear-gradient(to right, #dc2626, #b91c1c); -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: 900; -fx-background-radius: 12; -fx-pref-height: 42;");
+        ok.setMaxWidth(Double.MAX_VALUE);
+        ok.setOnAction(e -> dialog.close());
+
+        HBox btnRow = new HBox(ok);
+        btnRow.setStyle("-fx-background-color: #f8fafc; -fx-padding: 14 24 18 24; -fx-border-color: #e2e8f0 transparent transparent transparent;");
+        HBox.setHgrow(ok, Priority.ALWAYS);
+
+        dialog.getDialogPane().setContent(new VBox(0, content, btnRow));
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        dialog.getDialogPane().lookupButton(ButtonType.CLOSE).setVisible(false);
+        dialog.showAndWait();
+    }
+
+    private void infoDialog(String title, String msg) {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("");
+        dialog.getDialogPane().getStylesheets().add(
+                getClass().getResource("/styles/app.css").toExternalForm());
+        dialog.getDialogPane().getStyleClass().add("confirm-dialog");
+        dialog.getDialogPane().setPrefWidth(380);
+
+        Label icon = new Label("ℹ");
+        icon.setStyle("-fx-font-size: 26px; -fx-font-weight: 900; -fx-text-fill: #2563eb; -fx-background-color: #dbeafe; -fx-background-radius: 999; -fx-min-width: 68; -fx-min-height: 68; -fx-max-width: 68; -fx-max-height: 68; -fx-alignment: CENTER;");
+
+        Label lTitle = new Label(title);
+        lTitle.setStyle("-fx-font-size: 17px; -fx-font-weight: 900; -fx-text-fill: #0f172a;");
+
+        Label lMsg = new Label(msg);
+        lMsg.setStyle("-fx-font-size: 13px; -fx-text-fill: #64748b;");
+        lMsg.setWrapText(true);
+
+        VBox content = new VBox(14, icon, new VBox(6, lTitle, lMsg));
+        content.setAlignment(Pos.CENTER);
+        content.setStyle("-fx-background-color: white; -fx-padding: 34 28 20 28;");
+
+        Button ok = new Button("OK");
+        ok.setStyle("-fx-background-color: linear-gradient(to right, #2563eb, #1d4ed8); -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: 900; -fx-background-radius: 12; -fx-pref-height: 42;");
+        ok.setMaxWidth(Double.MAX_VALUE);
+        ok.setOnAction(e -> dialog.close());
+
+        HBox btnRow = new HBox(ok);
+        btnRow.setStyle("-fx-background-color: #f8fafc; -fx-padding: 14 24 18 24; -fx-border-color: #e2e8f0 transparent transparent transparent;");
+        HBox.setHgrow(ok, Priority.ALWAYS);
+
+        dialog.getDialogPane().setContent(new VBox(0, content, btnRow));
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        dialog.getDialogPane().lookupButton(ButtonType.CLOSE).setVisible(false);
+        dialog.showAndWait();
     }
 }

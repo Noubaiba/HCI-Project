@@ -18,6 +18,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.chart.BarChart;
 import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.PieChart;
 import javafx.scene.chart.XYChart;
@@ -26,6 +27,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.Pagination;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -43,15 +45,20 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
 
+
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import com.ecommerce.stockapp.util.IconFactory;
 import javafx.scene.shape.SVGPath;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.Group;
 import java.util.Collections;
 import java.util.ArrayList;
 
@@ -61,17 +68,24 @@ import javafx.scene.control.PasswordField;
 
 import javafx.scene.Node;
 
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.DialogPane;
+import javafx.scene.control.Label;
+
 public class AdminDashboardView {
     private static final DateTimeFormatter EXPORT_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final int PAGE_SIZE = 10;
     private final AdminController controller;
     private BorderPane root;
     private VBox navBox;
     private Button activeNavButton;
-    
+
     private boolean collapsed = false;
     private VBox sidebar;
     private final List<Node> collapsibleNodes = new ArrayList<>();
-   
+
     private Label logoText;
     private Label sectionTitle;
 
@@ -109,18 +123,18 @@ public class AdminDashboardView {
     // NAVIGATION
     // =========================
     private VBox nav() {
-        sidebar = new VBox(26);
+        sidebar = new VBox(20);
         sidebar.getStyleClass().add("admin-sidebar");
 
-        // Mode ouvert par défaut : padding avec 20px à gauche pour le logo et les boutons
+        // Mode ouvert par d-faut : padding avec 20px - gauche pour le logo et les boutons
         sidebar.setPadding(new Insets(24, 10, 24, 20));
         sidebar.setFillWidth(true);
-        sidebar.setAlignment(Pos.TOP_LEFT); 
+        sidebar.setAlignment(Pos.TOP_LEFT);
 
         sectionTitle = new Label("ADMIN SPACE");
         sectionTitle.getStyleClass().add("admin-sidebar-eyebrow");
 
-        // ===================== HAMBURGER (TOUJOURS CENTRÉ) =====================
+        // ===================== HAMBURGER (TOUJOURS CENTR-) =====================
         Button menuButton = new Button();
         menuButton.setGraphic(hamburgerIcon());
         menuButton.getStyleClass().add("hamburger-btn");
@@ -129,13 +143,13 @@ public class AdminDashboardView {
 
         HBox menuPill = new HBox(menuButton);
         menuPill.setId("menuPill");
-        menuPill.setAlignment(Pos.CENTER); // Force le hamburger au centre dès le départ !
+        menuPill.setAlignment(Pos.CENTER); // Force le hamburger au centre des le depart !
         menuPill.setMaxWidth(Double.MAX_VALUE);
 
         // ===================== LOGO =====================
         VBox logoBlock = new VBox(10, brandBlock(), sectionTitle);
         logoBlock.setId("logoBlock");
-        logoBlock.setAlignment(Pos.TOP_LEFT); // Mode ouvert par défaut : à gauche
+        logoBlock.setAlignment(Pos.TOP_LEFT); // Mode ouvert par defaut : a gauche
         logoBlock.setMaxWidth(Double.MAX_VALUE);
 
         // ===================== NAVIGATION =====================
@@ -151,7 +165,7 @@ public class AdminDashboardView {
                 navButton(IconFactory.log(), "Logs", this::showLogs)
         );
 
-        // Conteneur supérieur (Hamburger + Logo)
+        // Conteneur sup-rieur (Hamburger + Logo)
         VBox top = new VBox(12, menuPill, logoBlock);
         top.setId("topContainer");
         top.setAlignment(Pos.TOP_LEFT);
@@ -172,7 +186,7 @@ public class AdminDashboardView {
     // =========================
     // BRAND BLOCK
     // =========================
-   
+
     private VBox brandBlock() {
         ImageView logoImage = new ImageView();
         try {
@@ -192,14 +206,14 @@ public class AdminDashboardView {
             collapsibleNodes.add(logoText);
         }
 
-        // On crée la ligne du logo. Son alignement sera géré dynamiquement dans toggleSidebar.
+        // On cr-e la ligne du logo. Son alignement sera g-r- dynamiquement dans toggleSidebar.
         HBox logoRow = new HBox(12, logoImage, logoText);
         logoRow.setId("logoRow"); // On lui donne un ID pour la retrouver facilement
-        logoRow.setAlignment(Pos.CENTER_LEFT); // Par défaut ouvert : à gauche
+        logoRow.setAlignment(Pos.CENTER_LEFT); // Par defaut ouvert : a gauche
 
         VBox brand = new VBox(8, logoRow);
         brand.setId("brandBlock"); // ID pour identification
-        brand.setAlignment(Pos.CENTER_LEFT); // Par défaut ouvert : à gauche
+        brand.setAlignment(Pos.CENTER_LEFT); // Par defaut ouvert : a gauche
         brand.setPadding(new Insets(0, 0, 15, 0));
 
         return brand;
@@ -215,17 +229,17 @@ public class AdminDashboardView {
         sidebar.setPrefWidth(w);
         sidebar.setMinWidth(w);
         sidebar.setMaxWidth(w);
-        
+
         // 1. Gestion du Padding global de la sidebar
         if (collapsed) {
-            sidebar.setPadding(new Insets(24, 0, 24, 0)); // Pas de décalage à gauche quand c'est fermé
+            sidebar.setPadding(new Insets(24, 0, 24, 0)); // Pas de decalage a gauche quand c'est ferme
             sidebar.setAlignment(Pos.TOP_CENTER);
         } else {
-            sidebar.setPadding(new Insets(24, 10, 24, 20)); // Marge propre à gauche quand c'est ouvert
+            sidebar.setPadding(new Insets(24, 10, 24, 20)); // Marge propre a gauche quand c'est ouvert
             sidebar.setAlignment(Pos.TOP_LEFT);
         }
 
-        // Visibilité des textes
+        // Visibilit- des textes
         sectionTitle.setVisible(!collapsed);
         sectionTitle.setManaged(!collapsed);
         logoText.setVisible(!collapsed);
@@ -236,7 +250,7 @@ public class AdminDashboardView {
             n.setManaged(!collapsed);
         }
 
-        // Alignement des boutons de navigation (Centre si fermé, Gauche si ouvert)
+        // Alignement des boutons de navigation (Centre si ferm-, Gauche si ouvert)
         navBox.getChildren().forEach(node -> {
             if (node instanceof Button btn) {
                 if (btn.getGraphic() instanceof HBox hbox) {
@@ -245,42 +259,42 @@ public class AdminDashboardView {
             }
         });
 
-        // 2. 🔥 TRAITEMENT SPÉCIFIQUE ET TRÈS STRICT POUR LE HAMBURGER ET LE LOGO
+        // 2. - TRAITEMENT SP-CIFIQUE ET TR-S STRICT POUR LE HAMBURGER ET LE LOGO
         if (sidebar.getChildren().get(0) instanceof VBox topContainer) {
-            
-            // A. Le Hamburger : Il reste TOUJOURS centré au milieu de la largeur disponible
+
+            // A. Le Hamburger : Il reste TOUJOURS centr- au milieu de la largeur disponible
             if (topContainer.getChildren().get(0) instanceof HBox menuPill) {
-                menuPill.setAlignment(Pos.CENTER); 
+                menuPill.setAlignment(Pos.CENTER);
             }
-            
-            // B. Le Logo et l'Espace Admin : Alignement dynamique selon l'état
+
+            // B. Le Logo et l'Espace Admin : Alignement dynamique selon l'-tat
             if (topContainer.getChildren().get(1) instanceof VBox logoBlock) {
                 if (collapsed) {
                     logoBlock.setAlignment(Pos.TOP_CENTER);
                     topContainer.setAlignment(Pos.TOP_CENTER);
-                    
+
                     if (logoBlock.getChildren().get(0) instanceof VBox brandBlock) {
                         brandBlock.setAlignment(Pos.CENTER);
                         if (brandBlock.getChildren().get(0) instanceof HBox logoRow) {
-                            logoRow.setAlignment(Pos.CENTER); // L'icône seule se centre parfaitement
+                            logoRow.setAlignment(Pos.CENTER); // L'icone seule se centre parfaitement
                         }
                     }
                 } else {
 
                     logoBlock.setAlignment(Pos.TOP_LEFT);
                     topContainer.setAlignment(Pos.TOP_LEFT);
-                    
+
                     if (logoBlock.getChildren().get(0) instanceof VBox brandBlock) {
                         brandBlock.setAlignment(Pos.CENTER_LEFT);
                         if (brandBlock.getChildren().get(0) instanceof HBox logoRow) {
-                            logoRow.setAlignment(Pos.CENTER_LEFT); // Repositionne à gauche
+                            logoRow.setAlignment(Pos.CENTER_LEFT); // Repositionne a gauche
                         }
                     }
                 }
             }
         }
     }
-    
+
     // =========================
     // NAV BUTTON FIX
     // =========================
@@ -300,7 +314,7 @@ public class AdminDashboardView {
         btn.getStyleClass().add("sidebar-item");
         btn.setMaxWidth(Double.MAX_VALUE);
 
-        // 🔥 FIX: needed for selectNav()
+        // - FIX: needed for selectNav()
         btn.getProperties().put("navText", label);
 
         btn.setOnAction(e -> {
@@ -317,7 +331,7 @@ public class AdminDashboardView {
         return btn;
     }
 
-    
+
 
     private void setActiveNav(Button button) {
         if (activeNavButton != null) {
@@ -350,7 +364,7 @@ public class AdminDashboardView {
 
         VBox stockBlock = new VBox(2, stockLabel, stockHint);
 
-        Label alertLabel = new Label(lowStock > 0 ? lowStock + " low stock" : "All good ✓");
+        Label alertLabel = new Label(lowStock > 0 ? lowStock + " low stock" : "All good OK");
         alertLabel.getStyleClass().addAll("dash-stock-badge", lowStock > 0 ? "dash-badge-low" : "dash-badge-ok");
 
         HBox top = new HBox(10, iconLabel, new VBox(2, nameLabel, productsLabel));
@@ -370,45 +384,35 @@ public class AdminDashboardView {
         DashboardStats stats = safe(controller::stats);
         if (stats == null) return;
 
-        // ── KPI Cards ────────────────────────────────────────────
-        VBox cardProducts = dashKpiCard("📦", "Total Products",   String.valueOf(stats.getProducts()), null,     "blue");
-        VBox cardStock    = dashKpiCard("🛍",  "Total Stock",     String.valueOf(stats.getProducts() * 10), "+12%", "blue");
-        VBox cardLow      = dashKpiCard("⚠",  "Low Stock Alerts", String.valueOf(stats.getLowStock()), null,    "orange");
-        VBox cardRevenue  = dashKpiCard("📊", "Revenue",          "$" + stats.getRevenue(),            "+8.5%", "blue");
+        List<Product> products = controller.products("");
+        List<Order> orders = controller.orders();
+        List<String> logs = controller.logs();
+        int totalStock = products.stream().mapToInt(Product::getQuantity).sum();
+        BigDecimal revenue = stats.getRevenue() == null ? BigDecimal.ZERO : stats.getRevenue();
 
-        HBox kpiRow = new HBox(16, cardProducts, cardStock, cardLow, cardRevenue);
+        VBox cardProducts = dashKpiCard("P", "Total Products", String.valueOf(stats.getProducts()), "+12%", "blue");
+        VBox cardStock    = dashKpiCard("S", "Total Stock", String.valueOf(totalStock), stats.getLowStock() + " low", "orange");
+        VBox cardOrders   = dashKpiCard("O", "Total Orders", String.valueOf(stats.getOrders()), "+8%", "purple");
+        VBox cardRevenue  = dashKpiCard("$", "Revenue", formatPrice(revenue), "+18%", "green");
+
+        HBox kpiRow = new HBox(16, cardProducts, cardStock, cardOrders, cardRevenue);
         kpiRow.getChildren().forEach(n -> HBox.setHgrow(n, Priority.ALWAYS));
 
-        // ── Charts ───────────────────────────────────────────────
-        VBox barCard = chartCard("Users by role", usersByRoleChart());
-        VBox pieCard = chartCard("Products by category", categoryChart());
+        VBox revenueCard = dashboardPanel("Sales Revenue", "Monthly", monthlySalesChart());
+        VBox categoryCard = topCategoriesCard(products);
+        HBox analyticsRow = new HBox(16, revenueCard, categoryCard);
+        HBox.setHgrow(revenueCard, Priority.ALWAYS);
+        revenueCard.setMinWidth(500);
+        categoryCard.setPrefWidth(390);
+        categoryCard.setMinWidth(360);
 
-        HBox chartsRow = new HBox(16, barCard, pieCard);
-        HBox.setHgrow(barCard, Priority.ALWAYS);
-        HBox.setHgrow(pieCard, Priority.ALWAYS);
+        VBox activityCard = recentActivityCard(logs, orders);
+        VBox productsCard = topProductsCard(products);
+        HBox bottomRow = new HBox(16, activityCard, productsCard);
+        HBox.setHgrow(activityCard, Priority.ALWAYS);
+        HBox.setHgrow(productsCard, Priority.ALWAYS);
 
-        // ── Category Cards ───────────────────────────────────────
-        List<Product> products = controller.products("");
-
-        java.util.Map<String, List<Product>> byCategory = products.stream()
-                .collect(java.util.stream.Collectors.groupingBy(
-                        p -> p.getCategoryName() == null ? "Uncategorized" : p.getCategoryName()
-                ));
-
-        FlowPane categoryRow = new FlowPane(16, 16);
-        for (java.util.Map.Entry<String, List<Product>> entry : byCategory.entrySet()) {
-            String catName      = entry.getKey();
-            List<Product> catProducts = entry.getValue();
-            int totalStock      = catProducts.stream().mapToInt(Product::getQuantity).sum();
-            int lowStock        = (int) catProducts.stream().filter(p -> p.getQuantity() < 10).count();
-            String accent       = lowStock > 0 ? "orange" : "blue";
-            VBox card           = dashCategoryCard(catName, catProducts.size(), totalStock, lowStock, accent);
-            card.setPrefWidth(200);
-            categoryRow.getChildren().add(card);
-        }
-
-        VBox body = new VBox(20, kpiRow, chartsRow,
-                surfaceCard(sectionTitle("Stock by Category", "Overview per category.", "📦"), categoryRow));
+        VBox body = new VBox(18, kpiRow, analyticsRow, bottomRow);
         body.getStyleClass().add("dash-body");
 
         setContent("Dashboard", body);
@@ -418,7 +422,7 @@ public class AdminDashboardView {
         Label iconLabel = new Label(icon);
         iconLabel.getStyleClass().addAll("dash-kpi-icon", accent);
 
-        Label trendLabel = new Label(trend == null ? "" : "↗ " + trend);
+        Label trendLabel = new Label(trend == null ? "" : " " + trend);
         trendLabel.getStyleClass().add("dash-kpi-trend");
         trendLabel.setVisible(trend != null);
 
@@ -435,8 +439,213 @@ public class AdminDashboardView {
         valueNode.getStyleClass().add("dash-kpi-value");
 
         VBox card = new VBox(10, top, labelNode, valueNode);
-        card.getStyleClass().addAll("dash-kpi-card");
+        card.getStyleClass().addAll("dash-kpi-card", accent);
         return card;
+    }
+
+    private VBox dashboardWelcome(DashboardStats stats, BigDecimal averageOrder) {
+        Label eyebrow = new Label("ADMIN OVERVIEW");
+        eyebrow.getStyleClass().add("dash-welcome-eyebrow");
+
+        Label title = new Label("Welcome back, " + controller.currentUser().getName() + "!");
+        title.getStyleClass().add("dash-welcome-title");
+
+        Label subtitle = new Label(stats.getOrders() + " orders tracked today . Average order " + formatPrice(averageOrder));
+        subtitle.getStyleClass().add("dash-welcome-subtitle");
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Button addProduct = Ui.primary("Add product");
+        addProduct.getStyleClass().add("dash-welcome-action");
+        addProduct.setOnAction(e -> {
+            selectNav("Products");
+            productDialog(null);
+        });
+
+        HBox content = new HBox(18, new VBox(4, eyebrow, title, subtitle), spacer, addProduct);
+        content.setAlignment(Pos.CENTER_LEFT);
+        VBox card = new VBox(content);
+        card.getStyleClass().add("dash-welcome-card");
+        return card;
+    }
+
+    private VBox dashboardPanel(String title, String actionText, javafx.scene.Node content) {
+        Label titleLabel = new Label(title);
+        titleLabel.getStyleClass().add("dash-panel-title");
+
+        Button action = Ui.secondary(actionText);
+        action.getStyleClass().add("dash-panel-action");
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox header = new HBox(12, titleLabel, spacer, action);
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        VBox panel = new VBox(14, header, content);
+        panel.getStyleClass().add("dash-panel");
+        VBox.setVgrow(content, Priority.ALWAYS);
+        return panel;
+    }
+
+    private VBox topCategoriesCard(List<Product> products) {
+        PieChart chart = categoryChart();
+        chart.setLegendVisible(false);
+        chart.setLabelsVisible(false);
+        chart.setPrefHeight(245);
+        chart.getStyleClass().add("dash-donut-chart");
+
+        java.util.Map<String, Integer> stockByCategory = products.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        p -> p.getCategoryName() == null || p.getCategoryName().isBlank() ? "Uncategorized" : p.getCategoryName(),
+                        LinkedHashMap::new,
+                        java.util.stream.Collectors.summingInt(Product::getQuantity)
+                ));
+        int total = Math.max(1, stockByCategory.values().stream().mapToInt(Integer::intValue).sum());
+
+        VBox rows = new VBox(9);
+        stockByCategory.entrySet().stream().limit(4).forEach(entry -> {
+            int pct = (int) Math.round(entry.getValue() * 100.0 / total);
+            rows.getChildren().add(categoryLine(entry.getKey(), entry.getValue() + " units", pct + "%"));
+        });
+        if (rows.getChildren().isEmpty()) {
+            rows.getChildren().add(categoryLine("No category", "0 units", "0%"));
+        }
+
+        VBox panel = dashboardPanel("Top Categories", "See All", new VBox(8, chart, rows));
+        panel.getStyleClass().add("dash-category-panel");
+        return panel;
+    }
+
+    private HBox categoryLine(String name, String value, String percent) {
+        Label dot = new Label("-");
+        dot.getStyleClass().add("dash-category-dot");
+        Label nameLabel = new Label(name);
+        nameLabel.getStyleClass().add("dash-category-name");
+        Label valueLabel = new Label(value);
+        valueLabel.getStyleClass().add("dash-category-value");
+        Label percentLabel = new Label(percent);
+        percentLabel.getStyleClass().add("dash-category-percent");
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox row = new HBox(7, dot, nameLabel, spacer, valueLabel, percentLabel);
+        row.setAlignment(Pos.CENTER_LEFT);
+        return row;
+    }
+
+    private VBox recentActivityCard(List<String> logs, List<Order> orders) {
+        VBox rows = new VBox(10);
+        logs.stream().limit(4).forEach(log -> rows.getChildren().add(activityRow("A", log, "System")));
+        if (rows.getChildren().isEmpty()) {
+            orders.stream().limit(4).forEach(order -> rows.getChildren().add(activityRow(
+                    "O",
+                    "Order #" + order.getId() + " . " + order.getCustomerName(),
+                    order.getStatus() == null ? "Order" : order.getStatus().name().replace('_', ' ')
+            )));
+        }
+        if (rows.getChildren().isEmpty()) {
+            rows.getChildren().add(activityRow("N", "No recent activity yet", "Ready"));
+        }
+
+        VBox panel = dashboardPanel("Recent Activity", "See All", rows);
+        panel.getStyleClass().add("dash-activity-panel");
+        return panel;
+    }
+
+    private HBox activityRow(String iconText, String message, String badgeText) {
+        Label icon = new Label(iconText);
+        icon.getStyleClass().add("dash-activity-icon");
+
+        Label title = new Label(message);
+        title.getStyleClass().add("dash-activity-title");
+        title.setWrapText(true);
+        title.setMaxWidth(Double.MAX_VALUE);
+        title.setMinHeight(Region.USE_PREF_SIZE);
+
+        Label meta = new Label("Latest update");
+        meta.getStyleClass().add("dash-activity-meta");
+
+        VBox copy = new VBox(2, title, meta);
+        HBox.setHgrow(copy, Priority.ALWAYS);
+
+        Label badge = new Label(badgeText);
+        badge.getStyleClass().add("dash-activity-badge");
+        badge.setMinWidth(82);
+        badge.setPrefWidth(82);
+        badge.setMaxWidth(82);
+        badge.setTextOverrun(javafx.scene.control.OverrunStyle.CLIP);
+
+        HBox row = new HBox(12, icon, copy, badge);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.getStyleClass().add("dash-activity-row");
+        return row;
+    }
+
+    private VBox topProductsCard(List<Product> products) {
+        VBox rows = new VBox(0);
+        products.stream()
+                .sorted(java.util.Comparator.comparingInt(Product::getQuantity).reversed())
+                .limit(5)
+                .forEach(product -> rows.getChildren().add(productTableRow(product)));
+        if (rows.getChildren().isEmpty()) {
+            rows.getChildren().add(productTableEmptyRow());
+        }
+
+        HBox header = new HBox(
+                productTableHeader("Product", 220),
+                productTableHeader("Stock", 80),
+                productTableHeader("Price", 90),
+                productTableHeader("Status", 100)
+        );
+        header.getStyleClass().add("dash-product-table-head");
+
+        VBox table = new VBox(header, rows);
+        table.getStyleClass().add("dash-product-table");
+
+        VBox panel = dashboardPanel("Top Products", "Sort", table);
+        panel.getStyleClass().add("dash-products-panel");
+        return panel;
+    }
+
+    private Label productTableHeader(String text, double width) {
+        Label label = new Label(text);
+        label.getStyleClass().add("dash-product-th");
+        label.setPrefWidth(width);
+        return label;
+    }
+
+    private HBox productTableRow(Product product) {
+        Label name = new Label(product.getName());
+        name.getStyleClass().add("dash-product-cell-name");
+        name.setPrefWidth(220);
+
+        Label stock = new Label(String.valueOf(product.getQuantity()));
+        stock.getStyleClass().add("dash-product-cell");
+        stock.setPrefWidth(80);
+
+        Label price = new Label(formatPrice(product.getPrice()));
+        price.getStyleClass().add("dash-product-cell");
+        price.setPrefWidth(90);
+
+        Label status = new Label(product.getQuantity() < 10 ? "Low Stock" : "In Stock");
+        status.getStyleClass().addAll("dash-stock-badge", product.getQuantity() < 10 ? "dash-badge-low" : "dash-badge-ok");
+        status.setPrefWidth(100);
+
+        HBox row = new HBox(name, stock, price, status);
+        row.getStyleClass().add("dash-product-table-row");
+        row.setAlignment(Pos.CENTER_LEFT);
+        return row;
+    }
+
+    private HBox productTableEmptyRow() {
+        Label empty = new Label("No products yet");
+        empty.getStyleClass().add("dash-product-cell-name");
+        HBox row = new HBox(empty);
+        row.getStyleClass().add("dash-product-table-row");
+        return row;
     }
 
     private VBox dashProductCard(Product p) {
@@ -467,7 +676,7 @@ public class AdminDashboardView {
         name.getStyleClass().add("dash-product-name");
         name.setWrapText(true);
 
-        Label category = new Label(p.getCategoryName() == null ? "—" : p.getCategoryName());
+        Label category = new Label(p.getCategoryName() == null ? "-" : p.getCategoryName());
         category.getStyleClass().add("dash-product-category");
 
         Region spacer = new Region();
@@ -479,7 +688,7 @@ public class AdminDashboardView {
         // Stats row
         VBox stockCol  = dashStatCol("Stock",  String.valueOf(p.getQuantity()));
         VBox priceCol  = dashStatCol("Price",  "$" + p.getPrice());
-        VBox soldCol   = dashStatCol("Sold",   "—");
+        VBox soldCol   = dashStatCol("Sold",   "-");
         HBox statsRow  = new HBox(24, stockCol, priceCol, soldCol);
 
         // Progress bar
@@ -527,7 +736,7 @@ public class AdminDashboardView {
     }
 
     private VBox heroPanel(DashboardStats stats) {
-        HBox heroTop = new HBox(12, iconBubble("✦", "admin-hero-icon"), new Label("TODAY"));
+        HBox heroTop = new HBox(12, iconBubble("*", "admin-hero-icon"), new Label("TODAY"));
         ((Label) heroTop.getChildren().get(1)).getStyleClass().add("admin-hero-eyebrow");
 
         Label title = new Label("Your admin workspace is healthy and ready.");
@@ -573,7 +782,7 @@ public class AdminDashboardView {
         });
 
         VBox card = surfaceCard(
-                sectionTitle("Quick actions", "Jump into the most common admin tasks.", "⚡"),
+                sectionTitle("Quick actions", "Jump into the most common admin tasks.", "?"),
                 products,
                 users,
                 orders
@@ -584,11 +793,11 @@ public class AdminDashboardView {
 
     private VBox metricCard(String label, String value, String detail) {
         String iconText = switch (label) {
-            case "Products" -> "📦";
-            case "Users" -> "👥";
-            case "Orders" -> "🧾";
-            case "Revenue" -> "💰";
-            default -> "•";
+            case "Products" -> "?";
+            case "Users" -> "?";
+            case "Orders" -> "?";
+            case "Revenue" -> "?";
+            default -> "-";
         };
 
         Label overline = new Label(label.toUpperCase());
@@ -611,11 +820,11 @@ public class AdminDashboardView {
 
     private VBox chartCard(String title, javafx.scene.Node chart) {
         String iconText = switch (title) {
-            case "Products by category" -> "◔";
-            case "Users by role" -> "▥";
-            case "Stock by product" -> "▤";
-            case "Orders by status" -> "◕";
-            default -> "•";
+            case "Products by category" -> "?";
+            case "Users by role" -> "?";
+            case "Stock by product" -> "?";
+            case "Orders by status" -> "?";
+            default -> "-";
         };
         VBox card = surfaceCard(sectionTitle(title, "Readable visuals with less noise.", iconText), chart);
         card.getStyleClass().add("chart-card");
@@ -706,13 +915,34 @@ public class AdminDashboardView {
     private void showProducts() {
         TextField search = Ui.text("Search products");
         TableView<Product> table = productTable();
-        table.setItems(FXCollections.observableArrayList(controller.products("")));
-        search.textProperty().addListener((o, old, value) -> table.setItems(FXCollections.observableArrayList(controller.products(value))));
+
+        // Hauteur fixe - le scroll se fait sur la PAGE, pas dans la table
+        double rowH = 96;
+        table.setPrefHeight(PAGE_SIZE * rowH + 58);
+        table.setMinHeight(PAGE_SIZE * rowH + 58);
+        table.setMaxHeight(PAGE_SIZE * rowH + 58);
+
+        Pagination pagination = new Pagination();
+        pagination.getStyleClass().add("table-pagination");
+
+        Runnable reload = () -> {
+            List<Product> all = controller.products(search.getText());
+            int pages = Math.max(1, (int) Math.ceil(all.size() / (double) PAGE_SIZE));
+            if (pagination.getPageCount() != pages) pagination.setPageCount(pages);
+            int idx = Math.min(pagination.getCurrentPageIndex(), pages - 1);
+            table.setItems(FXCollections.observableArrayList(
+                    all.subList(idx * PAGE_SIZE, Math.min(idx * PAGE_SIZE + PAGE_SIZE, all.size()))));
+        };
+
+        reload.run();
+        pagination.currentPageIndexProperty().addListener((o, old, val) -> reload.run());
+        search.textProperty().addListener((o, old, val) -> { pagination.setCurrentPageIndex(0); reload.run(); });
 
         Button add = Ui.primary("+ Product");
         add.setOnAction(e -> {
             productDialog(null);
-            table.setItems(FXCollections.observableArrayList(controller.products(search.getText())));
+            pagination.setCurrentPageIndex(0);
+            reload.run();
         });
 
         Button categories = Ui.secondary("+ Category");
@@ -723,7 +953,7 @@ public class AdminDashboardView {
             Product selected = table.getSelectionModel().getSelectedItem();
             if (selected != null && Ui.confirm("Delete product", "Delete " + selected.getName() + "?")) {
                 run(() -> controller.deleteProduct(selected));
-                table.setItems(FXCollections.observableArrayList(controller.products(search.getText())));
+                reload.run();
             }
         });
 
@@ -735,17 +965,20 @@ public class AdminDashboardView {
             row.setOnMouseClicked(event -> {
                 if (event.getClickCount() == 2 && !row.isEmpty()) {
                     productDialog(row.getItem());
-                    table.setItems(FXCollections.observableArrayList(controller.products(search.getText())));
+                    reload.run();
                 }
             });
             return row;
         });
 
+        BorderPane tableShell = new BorderPane(table);
+        tableShell.setBottom(pagination);
+        BorderPane.setMargin(pagination, new Insets(8, 0, 0, 0));
+
         VBox body = new VBox(16,
                 surfaceCard(Ui.toolbar(search, add, categories, export, delete)),
-                surfaceCard(table)
+                surfaceCard(tableShell)
         );
-        VBox.setVgrow(body.getChildren().get(body.getChildren().size() - 1), Priority.ALWAYS);
         setContent("Product management", body);
     }
 
@@ -753,29 +986,51 @@ public class AdminDashboardView {
         List<User> users = controller.users();
         TableView<User> table = new TableView<>();
         decorateTable(table, 68);
-        table.setItems(FXCollections.observableArrayList(users));
+
+        // Hauteur fixe - scroll sur la PAGE, pas dans la table
+        table.setPrefHeight(PAGE_SIZE * 68.0 + 58);
+        table.setMinHeight(PAGE_SIZE * 68.0 + 58);
+        table.setMaxHeight(PAGE_SIZE * 68.0 + 58);
+
         table.getColumns().add(userIdentityColumn());
-        table.getColumns().add(col("Email", User::getEmail));
+        table.getColumns().add(userEmailColumn());
         table.getColumns().add(userRoleColumn());
         table.getColumns().add(userStatusColumn());
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
+        table.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+
+        Pagination pagination = new Pagination();
+        pagination.getStyleClass().add("table-pagination");
+
+        final List<User>[] src = new List[]{users};
+        Runnable reload = () -> {
+            List<User> all = src[0];
+            int pages = Math.max(1, (int) Math.ceil(all.size() / (double) PAGE_SIZE));
+            if (pagination.getPageCount() != pages) pagination.setPageCount(pages);
+            int idx = Math.min(pagination.getCurrentPageIndex(), pages - 1);
+            table.setItems(FXCollections.observableArrayList(
+                    all.subList(idx * PAGE_SIZE, Math.min(idx * PAGE_SIZE + PAGE_SIZE, all.size()))));
+        };
+        reload.run();
+        pagination.currentPageIndexProperty().addListener((o, old, val) -> reload.run());
 
         Button stockManager = Ui.primary("+ Stock manager");
         stockManager.getStyleClass().add("admin-action-primary");
         stockManager.setOnAction(e -> {
             createStockManagerDialog();
-            table.setItems(FXCollections.observableArrayList(controller.users()));
+            src[0] = controller.users();
+            pagination.setCurrentPageIndex(0);
+            reload.run();
         });
 
         Button activate = Ui.secondary("Activate");
         activate.getStyleClass().add("admin-action-success");
-        activate.setOnAction(e -> updateUser(table, UserStatus.ACTIVE));
+        activate.setOnAction(e -> updateUser(table, UserStatus.ACTIVE, src, pagination, reload));
         Button deactivate = Ui.secondary("Deactivate");
         deactivate.getStyleClass().add("admin-action-muted");
-        deactivate.setOnAction(e -> updateUser(table, UserStatus.INACTIVE));
+        deactivate.setOnAction(e -> updateUser(table, UserStatus.INACTIVE, src, pagination, reload));
         Button block = Ui.danger("Block");
         block.getStyleClass().add("admin-action-danger");
-        block.setOnAction(e -> updateUser(table, UserStatus.BLOCKED));
+        block.setOnAction(e -> updateUser(table, UserStatus.BLOCKED, src, pagination, reload));
         Button export = Ui.secondary("Export CSV");
         export.getStyleClass().add("admin-action-export");
         export.setOnAction(e -> exportUsers(table.getItems()));
@@ -791,10 +1046,14 @@ public class AdminDashboardView {
         HBox toolbar = Ui.toolbar(stockManager, activate, deactivate, export, block);
         toolbar.getStyleClass().add("admin-management-toolbar");
 
+        BorderPane tableShell = new BorderPane(table);
+        tableShell.setBottom(pagination);
+        BorderPane.setMargin(pagination, new Insets(8, 0, 0, 0));
+
         VBox body = new VBox(16,
                 overview,
                 surfaceCard(sectionTitle("Account control", "Create managers, update access and export users from one clean workspace.", "U"), toolbar),
-                surfaceCard(table)
+                surfaceCard(tableShell)
         );
         setContent("User administration", body);
     }
@@ -803,13 +1062,33 @@ public class AdminDashboardView {
         List<Order> orders = controller.orders();
         TableView<Order> table = new TableView<>();
         decorateTable(table, 68);
-        table.setItems(FXCollections.observableArrayList(orders));
+
+        // Hauteur fixe - scroll sur la PAGE, pas dans la table
+        table.setPrefHeight(PAGE_SIZE * 68.0 + 58);
+        table.setMinHeight(PAGE_SIZE * 68.0 + 58);
+        table.setMaxHeight(PAGE_SIZE * 68.0 + 58);
+
         table.getColumns().add(orderIdColumn());
         table.getColumns().add(orderCustomerColumn());
         table.getColumns().add(orderTotalColumn());
         table.getColumns().add(orderStatusColumn());
         table.getColumns().add(orderDateColumn());
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
+
+        Pagination pagination = new Pagination();
+        pagination.getStyleClass().add("table-pagination");
+
+        final List<Order>[] src = new List[]{orders};
+        Runnable reload = () -> {
+            List<Order> all = src[0];
+            int pages = Math.max(1, (int) Math.ceil(all.size() / (double) PAGE_SIZE));
+            if (pagination.getPageCount() != pages) pagination.setPageCount(pages);
+            int idx = Math.min(pagination.getCurrentPageIndex(), pages - 1);
+            table.setItems(FXCollections.observableArrayList(
+                    all.subList(idx * PAGE_SIZE, Math.min(idx * PAGE_SIZE + PAGE_SIZE, all.size()))));
+        };
+        reload.run();
+        pagination.currentPageIndexProperty().addListener((o, old, val) -> reload.run());
 
         ComboBox<OrderStatus> status = new ComboBox<>(FXCollections.observableArrayList(OrderStatus.values()));
         status.setPromptText("Set status");
@@ -820,7 +1099,8 @@ public class AdminDashboardView {
             Order order = table.getSelectionModel().getSelectedItem();
             if (order != null && status.getValue() != null) {
                 run(() -> controller.updateOrderStatus(order, status.getValue()));
-                table.setItems(FXCollections.observableArrayList(controller.orders()));
+                src[0] = controller.orders();
+                reload.run();
             }
         });
         Button export = Ui.secondary("Export CSV");
@@ -838,10 +1118,14 @@ public class AdminDashboardView {
         HBox toolbar = Ui.toolbar(status, update, export);
         toolbar.getStyleClass().add("admin-management-toolbar");
 
+        BorderPane tableShell = new BorderPane(table);
+        tableShell.setBottom(pagination);
+        BorderPane.setMargin(pagination, new Insets(8, 0, 0, 0));
+
         VBox body = new VBox(16,
                 overview,
                 surfaceCard(sectionTitle("Order workflow", "Select an order, change its status and keep fulfillment moving.", "O"), toolbar),
-                surfaceCard(table)
+                surfaceCard(tableShell)
         );
         setContent("All orders", body);
     }
@@ -896,7 +1180,7 @@ public class AdminDashboardView {
 
     private TableColumn<User, String> userIdentityColumn() {
         TableColumn<User, String> column = new TableColumn<>("User");
-        column.setPrefWidth(240);
+        column.setPrefWidth(330);
         column.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getName()));
         column.setCellFactory(col -> new TableCell<>() {
             @Override
@@ -930,9 +1214,36 @@ public class AdminDashboardView {
         return column;
     }
 
+    private TableColumn<User, String> userEmailColumn() {
+        TableColumn<User, String> column = new TableColumn<>("Email");
+        column.setPrefWidth(270);
+        column.setMinWidth(230);
+        column.setMaxWidth(290);
+        column.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getEmail()));
+        column.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String email, boolean empty) {
+                super.updateItem(email, empty);
+                if (empty || email == null) {
+                    setText(null);
+                    setGraphic(null);
+                    return;
+                }
+
+                Label label = new Label(email);
+                label.getStyleClass().add("admin-email-full");
+                label.setTextOverrun(javafx.scene.control.OverrunStyle.CLIP);
+                label.setMinWidth(Region.USE_PREF_SIZE);
+                setText(null);
+                setGraphic(label);
+            }
+        });
+        return column;
+    }
+
     private TableColumn<User, String> userRoleColumn() {
         TableColumn<User, String> column = new TableColumn<>("Role");
-        column.setPrefWidth(170);
+        column.setPrefWidth(140);
         column.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getRole() == null ? "" : data.getValue().getRole().name()));
         column.setCellFactory(col -> new TableCell<>() {
             @Override
@@ -1437,53 +1748,496 @@ public class AdminDashboardView {
 
     private void showReports() {
         DashboardStats stats = safe(controller::stats);
+        if (stats == null) return;
 
-        HBox kpiRow = new HBox(16);
-        kpiRow.getStyleClass().add("admin-report-kpi-row");
+        List<Product> products = controller.products("");
+        List<User> users = controller.users();
+        List<Order> orders = controller.orders();
+        BigDecimal revenue = stats.getRevenue() == null ? BigDecimal.ZERO : stats.getRevenue();
+        YearMonth thisMonth = YearMonth.now();
+        YearMonth lastMonth = thisMonth.minusMonths(1);
+        BigDecimal thisMonthRevenue = revenueForMonth(orders, thisMonth);
+        BigDecimal lastMonthRevenue = revenueForMonth(orders, lastMonth);
+        int thisMonthOrders = ordersForMonth(orders, thisMonth);
+        int lastMonthOrders = ordersForMonth(orders, lastMonth);
 
-        if (stats != null) {
-            BigDecimal revenue = stats.getRevenue() != null ? stats.getRevenue() : BigDecimal.ZERO;
-            BigDecimal average = revenue.divide(
-                    BigDecimal.valueOf(Math.max(1, stats.getOrders())), 2, java.math.RoundingMode.HALF_UP);
-
-            kpiRow.getChildren().addAll(
-                    reportKpiCard("Total Revenue",    "$" + revenue,                        "All-time earnings",       "R", "revenue"),
-                    reportKpiCard("Average Order",    "$" + average,                        "Revenue per order",       "A", "average"),
-                    reportKpiCard("Conversion Rate",  "3.2%",                               "↑ 1.2% this month",      "C", "conversion"),
-                    reportKpiCard("Low Stock Alerts", String.valueOf(stats.getLowStock()),  "Items requiring restock", "L", "alert")
-            );
-            kpiRow.getChildren().forEach(node -> HBox.setHgrow(node, Priority.ALWAYS));
-        }
-
-        VBox reportArea = buildReportDisplay(controller.report());
-        VBox.setVgrow(reportArea, Priority.ALWAYS);
-
-        Button refresh = Ui.secondary("Refresh");
-        refresh.getStyleClass().add("admin-report-refresh-btn");
-
-        Button exportBtn = Ui.secondary("Export CSV");
-        exportBtn.getStyleClass().add("admin-report-export-btn");
+        Button exportBtn = Ui.secondary("Download report");
+        exportBtn.getStyleClass().add("admin-report-dark-action");
         exportBtn.setOnAction(e -> exportCsv("report-export.csv", "report\n" + controller.report()));
 
-        VBox reportSection = surfaceCard(
-                sectionTitle("Report Details", "Consolidated data refreshed in real time.", "📋"),
-                Ui.toolbar(refresh, exportBtn),
-                reportArea
+        Button moreBtn = Ui.secondary("Request custom report");
+        moreBtn.getStyleClass().add("admin-report-dark-action");
+
+        HBox header = reportHeader(exportBtn, moreBtn);
+
+        BigDecimal average = revenue.divide(
+                BigDecimal.valueOf(Math.max(1, stats.getOrders())), 2, java.math.RoundingMode.HALF_UP);
+        BigDecimal thisMonthAverage = averageForMonth(orders, thisMonth);
+        BigDecimal lastMonthAverage = averageForMonth(orders, lastMonth);
+
+        HBox metricRow = new HBox(16,
+                reportSummaryMetric("Net Income", formatPrice(revenue), formatChange(thisMonthRevenue, lastMonthRevenue), "income"),
+                reportSummaryMetric("Order per Month", String.valueOf(thisMonthOrders), formatChange(thisMonthOrders, lastMonthOrders), "orders"),
+                reportSummaryMetric("Average Contract", formatPrice(average), formatChange(thisMonthAverage, lastMonthAverage), "average"),
+                reportSummaryMetric("Growth Rate", percentText(percentChange(thisMonthRevenue, lastMonthRevenue)), "Revenue change from last month", "growth")
         );
-        reportSection.getStyleClass().add("admin-report-toolbar");
-        VBox.setVgrow(reportSection, Priority.ALWAYS);
+        metricRow.getStyleClass().add("admin-report-summary-row");
+        metricRow.getChildren().forEach(node -> HBox.setHgrow(node, Priority.ALWAYS));
 
-        refresh.setOnAction(e -> {
-            reportSection.getChildren().remove(reportSection.getChildren().size() - 1);
-            VBox newReport = buildReportDisplay(controller.report());
-            VBox.setVgrow(newReport, Priority.ALWAYS);
-            reportSection.getChildren().add(newReport);
+        VBox salesPanel = reportPanel("Total Sales", "Revenue and order trend", reportTotalSalesLineChart(orders), "admin-report-chart-panel");
+        VBox channelPanel = reportPanel("Sales Activity", "Orders by status", reportSalesActivityDonut(orders), "admin-report-chart-panel");
+        HBox chartsRow = new HBox(16, salesPanel, channelPanel);
+        HBox.setHgrow(salesPanel, Priority.ALWAYS);
+        HBox.setHgrow(channelPanel, Priority.ALWAYS);
+
+        VBox productsPanel = topProductPerformancePanel(products);
+        VBox customerPanel = customerByCountryPanel(users);
+        HBox lowerRow = new HBox(16, productsPanel, customerPanel);
+        HBox.setHgrow(productsPanel, Priority.ALWAYS);
+        HBox.setHgrow(customerPanel, Priority.ALWAYS);
+
+        VBox contentBody = new VBox(12, header, metricRow, chartsRow, lowerRow);
+        contentBody.getStyleClass().add("admin-report-dark-page");
+
+        setReportContent(contentBody);
+    }
+
+    private HBox reportHeader(Button exportBtn, Button moreBtn) {
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox actions = new HBox(8, exportBtn, moreBtn);
+        actions.setAlignment(Pos.CENTER_RIGHT);
+
+        HBox header = new HBox(spacer, actions);
+        header.getStyleClass().add("admin-report-page-header");
+        header.setAlignment(Pos.CENTER_RIGHT);
+        return header;
+    }
+
+    private VBox reportSummaryMetric(String label, String value, String hint, String accent) {
+        Label labelNode = new Label(label);
+        labelNode.getStyleClass().add("admin-report-summary-label");
+
+        Label valueNode = new Label(value);
+        valueNode.getStyleClass().add("admin-report-summary-value");
+
+        Label hintNode = new Label(hint);
+        hintNode.getStyleClass().add("admin-report-summary-hint");
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox top = new HBox(10, labelNode, spacer);
+        top.setAlignment(Pos.CENTER_LEFT);
+
+        VBox metric = new VBox(10, top, valueNode, hintNode);
+        metric.getStyleClass().addAll("admin-report-summary-metric", accent);
+        return metric;
+    }
+
+    private VBox reportPanel(String title, String legend, javafx.scene.Node content, String styleClass) {
+        Label titleNode = new Label(title);
+        titleNode.getStyleClass().add("admin-report-panel-title");
+
+        Button menu = Ui.secondary("...");
+        menu.getStyleClass().add("admin-report-panel-menu");
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        VBox titleBlock;
+        if (legend != null && !legend.isBlank()) {
+            Label legendNode = new Label(legend);
+            legendNode.getStyleClass().add("admin-report-panel-legend");
+            titleBlock = new VBox(4, titleNode, legendNode);
+        } else {
+            titleBlock = new VBox(4, titleNode);
+        }
+
+        HBox header = new HBox(10, titleBlock, spacer, menu);
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        VBox panel = new VBox(14, header, content);
+        panel.getStyleClass().addAll("admin-report-panel", styleClass);
+        VBox.setVgrow(content, Priority.ALWAYS);
+        return panel;
+    }
+
+    private LineChart<String, Number> reportTotalSalesLineChart(List<Order> orders) {
+        CategoryAxis x = new CategoryAxis();
+        NumberAxis y = new NumberAxis();
+        LineChart<String, Number> chart = new LineChart<>(x, y);
+        chart.setAnimated(false);
+        chart.setCreateSymbols(true);
+        chart.setLegendVisible(true);
+        chart.setTitle(null);
+        chart.getStyleClass().add("admin-report-line-chart");
+
+        XYChart.Series<String, Number> revenue = new XYChart.Series<>();
+        revenue.setName("Revenue");
+        XYChart.Series<String, Number> ordersSeries = new XYChart.Series<>();
+        ordersSeries.setName("Orders");
+
+        YearMonth start = YearMonth.now().minusMonths(5);
+        for (int i = 0; i < 6; i++) {
+            YearMonth month = start.plusMonths(i);
+            String label = month.format(DateTimeFormatter.ofPattern("MMM yyyy"));
+            revenue.getData().add(new XYChart.Data<>(label, revenueForMonth(orders, month)));
+            ordersSeries.getData().add(new XYChart.Data<>(label, ordersForMonth(orders, month)));
+        }
+
+        chart.getData().addAll(revenue, ordersSeries);
+        chart.setPrefHeight(270);
+        return chart;
+    }
+
+    private VBox reportSalesActivityDonut(List<Order> orders) {
+        var statusCounts = orders.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        order -> order.getStatus() == null ? "UNKNOWN" : order.getStatus().name(),
+                        LinkedHashMap::new,
+                        java.util.stream.Collectors.counting()
+                ));
+        if (statusCounts.isEmpty()) {
+            statusCounts.put("NO ORDERS", 1L);
+        }
+
+        PieChart chart = new PieChart();
+        statusCounts.forEach((status, count) -> chart.getData().add(
+                new PieChart.Data(status.replace('_', ' '), count)
+        ));
+        chart.setLegendVisible(false);
+        chart.setLabelsVisible(true);
+        chart.setTitle(null);
+        chart.setPrefHeight(240);
+        chart.getStyleClass().add("admin-report-donut-chart");
+
+        Region hole = new Region();
+        hole.getStyleClass().add("admin-report-donut-hole");
+        hole.setMouseTransparent(true);
+
+        StackPane donut = new StackPane(chart, hole);
+        donut.getStyleClass().add("admin-report-donut-wrap");
+
+        HBox legend = new HBox(14);
+        int[] legendIndex = {0};
+        statusCounts.keySet().forEach(status -> {
+            legend.getChildren().add(reportLegendChip(status.replace('_', ' '), "sales-" + (legendIndex[0] % 5)));
+            legendIndex[0]++;
         });
+        legend.setAlignment(Pos.CENTER);
 
-        VBox contentBody = new VBox(16, kpiRow, reportSection);
-        VBox.setVgrow(reportSection, Priority.ALWAYS);
+        VBox box = new VBox(8, donut, legend);
+        box.setAlignment(Pos.CENTER);
+        return box;
+    }
 
-        setContent("Reports", contentBody);
+    private VBox topProductPerformancePanel(List<Product> products) {
+        VBox rows = new VBox(0);
+        HBox head = new HBox(
+                reportTableHead("Product Name", 270),
+                reportTableHead("Stock", 90),
+                reportTableHead("Price", 110),
+                reportTableHead("Value", 120)
+        );
+        head.getStyleClass().add("admin-report-product-head");
+
+        rows.getChildren().add(head);
+        products.stream()
+                .sorted(java.util.Comparator.comparing(
+                        p -> p.getPrice() == null ? BigDecimal.ZERO : p.getPrice(),
+                        java.util.Comparator.reverseOrder()
+                ))
+                .limit(5)
+                .forEach(product -> rows.getChildren().add(reportProductRow(product)));
+
+        if (products.isEmpty()) {
+            Label empty = new Label("No product data available.");
+            empty.getStyleClass().add("admin-report-empty");
+            rows.getChildren().add(new HBox(empty));
+        }
+
+        return reportPanel("Top Deals", "Companies, deal value and sales owners", rows, "admin-report-table-panel");
+    }
+
+    private Label reportTableHead(String text, double width) {
+        Label label = new Label(text);
+        label.getStyleClass().add("admin-report-table-head");
+        label.setPrefWidth(width);
+        return label;
+    }
+
+    private HBox reportProductRow(Product product) {
+        BigDecimal price = product.getPrice() == null ? BigDecimal.ZERO : product.getPrice();
+        BigDecimal value = price.multiply(BigDecimal.valueOf(Math.max(0, product.getQuantity())));
+
+        Label name = new Label(product.getName());
+        name.getStyleClass().add("admin-report-product-name");
+        name.setPrefWidth(270);
+
+        Label stock = new Label(String.valueOf(product.getQuantity()));
+        stock.getStyleClass().add("admin-report-product-cell");
+        stock.setPrefWidth(90);
+
+        Label priceLabel = new Label(formatPrice(price));
+        priceLabel.getStyleClass().add("admin-report-product-cell");
+        priceLabel.setPrefWidth(110);
+
+        Label valueLabel = new Label(formatPrice(value));
+        valueLabel.getStyleClass().add("admin-report-product-value");
+        valueLabel.setPrefWidth(120);
+
+        HBox row = new HBox(name, stock, priceLabel, valueLabel);
+        row.getStyleClass().add("admin-report-product-row");
+        row.setAlignment(Pos.CENTER_LEFT);
+        return row;
+    }
+
+    private VBox customerByCountryPanel(List<User> users) {
+        return customerHeatmapPanel(users);
+    }
+
+    private VBox customerHeatmapPanel(List<User> users) {
+        YearMonth start = YearMonth.now().minusMonths(9);
+        YearMonth[] months = new YearMonth[10];
+        for (int i = 0; i < months.length; i++) {
+            months[i] = start.plusMonths(i);
+        }
+
+        String[] seriesNames = {"Active Customers", "Inactive Customers", "Blocked Customers", "New Customers"};
+        String[] baseColors = {"#0d9488", "#14b8a6", "#5eead4", "#a7f3d0"};
+        int[][] data = customerHeatmapData(users, months);
+
+        // -- Legend row -----------------------------------------------------------
+        HBox legend = new HBox(16);
+        legend.setPadding(new Insets(0, 0, 10, 0));
+        legend.setAlignment(Pos.CENTER_LEFT);
+        legend.setAlignment(Pos.CENTER_LEFT);
+
+        // First row of legend: 3 items
+        HBox legendRow1 = new HBox(16);
+        legendRow1.setAlignment(Pos.CENTER_LEFT);
+        HBox legendRow2 = new HBox(16);
+        legendRow2.setAlignment(Pos.CENTER_LEFT);
+
+        for (int s = 0; s < seriesNames.length; s++) {
+            Region dot = new Region();
+            dot.setPrefSize(10, 3);
+            dot.setMinSize(10, 3);
+            dot.setMaxSize(10, 3);
+            dot.setStyle("-fx-background-color: " + baseColors[s] + "; -fx-background-radius: 2;");
+
+            Label lbl = new Label(seriesNames[s]);
+            lbl.setStyle("-fx-font-size: 10px; -fx-text-fill: #6b7280;");
+
+            HBox item = new HBox(5, dot, lbl);
+            item.setAlignment(Pos.CENTER_LEFT);
+
+            if (s < 3) legendRow1.getChildren().add(item);
+            else       legendRow2.getChildren().add(item);
+        }
+
+        VBox legendBox = new VBox(4, legendRow1, legendRow2);
+
+        // -- Y-axis labels (100%, 80%, 60%, 40%, 20%) -----------------------------
+        String[] yLabels = {"100%", "80%", "60%", "40%", "20%"};
+
+        // -- Grid layout: yLabels column + heatmap cells --------------------------
+        final double CELL_SIZE = 26;
+        final double CELL_GAP  = 4;
+        final int ROWS = 5;   // percentage bands
+        final int COLS = months.length;
+
+        GridPane grid = new GridPane();
+        grid.setHgap(CELL_GAP);
+        grid.setVgap(CELL_GAP);
+        grid.setAlignment(Pos.CENTER_LEFT);
+
+        // Y-axis labels (column 0)
+        for (int r = 0; r < ROWS; r++) {
+            Label yLbl = new Label(yLabels[r]);
+            yLbl.setStyle("-fx-font-size: 10px; -fx-text-fill: #9ca3af; -fx-min-width: 32px;");
+            yLbl.setAlignment(Pos.CENTER_RIGHT);
+            GridPane.setHalignment(yLbl, javafx.geometry.HPos.RIGHT);
+            grid.add(yLbl, 0, r);
+        }
+
+        // Heatmap cells (columns 1..COLS)
+        // We map each data series to a row band based on value ranges
+        // For each column (month), for each row band (0=100%, 4=20%),
+        // find which series has the highest value in that band and color accordingly
+        for (int col = 0; col < COLS; col++) {
+            for (int row = 0; row < ROWS; row++) {
+                // Threshold: row 0 = values 80-100, row 1 = 60-80, etc.
+                int lo = 100 - (row + 1) * 20;
+                int hi = 100 - row * 20;
+
+                // Find best matching series for this cell
+                int bestSeries = -1;
+                int bestVal = -1;
+                for (int s = 0; s < data.length; s++) {
+                    int v = data[s][col];
+                    if (v >= lo && (row == 0 ? v <= hi : v < hi) && v > bestVal) {
+                        bestVal = v;
+                        bestSeries = s;
+                    }
+                }
+
+                // Secondary: if no exact match, use proximity
+                if (bestSeries == -1) {
+                    for (int s = 0; s < data.length; s++) {
+                        int v = data[s][col];
+                        int dist = Math.min(Math.abs(v - lo), Math.abs(v - hi));
+                        if (dist < 10 && v > bestVal) {
+                            bestVal = v;
+                            bestSeries = s;
+                        }
+                    }
+                }
+
+                javafx.scene.shape.Rectangle cell = new javafx.scene.shape.Rectangle(CELL_SIZE, CELL_SIZE);
+                cell.setArcWidth(5);
+                cell.setArcHeight(5);
+
+                if (bestSeries >= 0) {
+                    // Intensity based on how strong the value is
+                    double intensity = bestVal / 100.0;
+                    String hex = baseColors[bestSeries];
+                    Color base = Color.web(hex);
+                    // Blend with white based on intensity
+                    Color blended = base.interpolate(Color.web("#e6fffa"), 1.0 - intensity * 0.85);
+                    cell.setFill(blended);
+                } else {
+                    cell.setFill(Color.web("#f0fdf9"));
+                }
+
+                grid.add(cell, col + 1, row);
+            }
+        }
+
+        // -- X-axis month labels ---------------------------------------------------
+        for (int col = 0; col < COLS; col++) {
+            Label xLbl = new Label(months[col].format(DateTimeFormatter.ofPattern("MMM")));
+            xLbl.setStyle("-fx-font-size: 9px; -fx-text-fill: #9ca3af;");
+            xLbl.setAlignment(Pos.CENTER);
+            xLbl.setMinWidth(CELL_SIZE);
+            GridPane.setHalignment(xLbl, javafx.geometry.HPos.CENTER);
+            grid.add(xLbl, col + 1, ROWS);
+        }
+
+        VBox content = new VBox(12, legendBox, grid);
+        content.setPadding(new Insets(4, 0, 0, 0));
+
+        return reportPanel("Customer's Report", null, content, "admin-report-customer-panel");
+    }
+
+    private BigDecimal revenueForMonth(List<Order> orders, YearMonth month) {
+        return orders.stream()
+                .filter(order -> order.getDate() != null && YearMonth.from(order.getDate()).equals(month))
+                .map(order -> order.getTotalPrice() == null ? BigDecimal.ZERO : order.getTotalPrice())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private int ordersForMonth(List<Order> orders, YearMonth month) {
+        return (int) orders.stream()
+                .filter(order -> order.getDate() != null && YearMonth.from(order.getDate()).equals(month))
+                .count();
+    }
+
+    private BigDecimal averageForMonth(List<Order> orders, YearMonth month) {
+        int count = ordersForMonth(orders, month);
+        if (count == 0) {
+            return BigDecimal.ZERO;
+        }
+        return revenueForMonth(orders, month).divide(BigDecimal.valueOf(count), 2, java.math.RoundingMode.HALF_UP);
+    }
+
+    private String formatChange(BigDecimal current, BigDecimal previous) {
+        return percentText(percentChange(current, previous)) + " from last month";
+    }
+
+    private String formatChange(int current, int previous) {
+        return percentText(percentChange(BigDecimal.valueOf(current), BigDecimal.valueOf(previous))) + " from last month";
+    }
+
+    private BigDecimal percentChange(BigDecimal current, BigDecimal previous) {
+        current = current == null ? BigDecimal.ZERO : current;
+        previous = previous == null ? BigDecimal.ZERO : previous;
+        if (previous.compareTo(BigDecimal.ZERO) == 0) {
+            return current.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ZERO : BigDecimal.valueOf(100);
+        }
+        return current.subtract(previous)
+                .multiply(BigDecimal.valueOf(100))
+                .divide(previous.abs(), 1, java.math.RoundingMode.HALF_UP);
+    }
+
+    private String percentText(BigDecimal value) {
+        BigDecimal safeValue = value == null ? BigDecimal.ZERO : value;
+        String sign = safeValue.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
+        return sign + safeValue.setScale(1, java.math.RoundingMode.HALF_UP) + "%";
+    }
+
+    private int[][] customerHeatmapData(List<User> users, YearMonth[] months) {
+        int[][] raw = new int[4][months.length];
+        for (int col = 0; col < months.length; col++) {
+            YearMonth month = months[col];
+            for (User user : users) {
+                YearMonth createdMonth = user.getCreatedAt() == null ? null : YearMonth.from(user.getCreatedAt());
+                boolean existedByMonth = createdMonth == null || !createdMonth.isAfter(month);
+                boolean createdThisMonth = createdMonth != null && createdMonth.equals(month);
+                if (user.getStatus() == UserStatus.ACTIVE && existedByMonth) raw[0][col]++;
+                if (user.getStatus() == UserStatus.INACTIVE && existedByMonth) raw[1][col]++;
+                if (user.getStatus() == UserStatus.BLOCKED && existedByMonth) raw[2][col]++;
+                if (createdThisMonth) raw[3][col]++;
+            }
+        }
+
+        int max = 0;
+        for (int[] row : raw) {
+            for (int value : row) {
+                max = Math.max(max, value);
+            }
+        }
+        if (max == 0) {
+            return raw;
+        }
+
+        int[][] normalized = new int[raw.length][months.length];
+        for (int row = 0; row < raw.length; row++) {
+            for (int col = 0; col < months.length; col++) {
+                normalized[row][col] = (int) Math.round(raw[row][col] * 100.0 / max);
+            }
+        }
+        return normalized;
+    }
+
+    private HBox reportLegendChip(String text, String accent) {
+        Region dot = new Region();
+        dot.getStyleClass().addAll("admin-report-dot", accent);
+        Label label = new Label(text);
+        label.getStyleClass().add("admin-report-legend-label");
+        HBox chip = new HBox(6, dot, label);
+        chip.setAlignment(Pos.CENTER_LEFT);
+        return chip;
+    }
+
+    private Region reportMapPin(String accent, double x, double y) {
+        Region pin = new Region();
+        pin.getStyleClass().addAll("admin-report-map-pin", accent);
+        pin.setLayoutX(x);
+        pin.setLayoutY(y);
+        return pin;
+    }
+
+    private VBox reportMiniStat(String label, String value) {
+        Label valueNode = new Label(value);
+        valueNode.getStyleClass().add("admin-report-mini-value");
+        Label labelNode = new Label(label);
+        labelNode.getStyleClass().add("admin-report-mini-label");
+        VBox stat = new VBox(2, valueNode, labelNode);
+        stat.getStyleClass().add("admin-report-mini-stat");
+        return stat;
     }
 
     private VBox reportKpiCard(String label, String value, String detail, String iconText, String accentClass) {
@@ -1532,16 +2286,17 @@ public class AdminDashboardView {
 
         TextField search = Ui.text("Search logs, users, actions...");
         search.getStyleClass().add("admin-log-search");
-        search.textProperty().addListener((observable, oldValue, value) -> {
-            String needle = value == null ? "" : value.trim().toLowerCase();
-            filteredLogs.setPredicate(log -> needle.isBlank() || log.toLowerCase().contains(needle));
-        });
 
-        ListView<String> list = new ListView<>(filteredLogs);
+        Pagination pagination = new Pagination();
+        pagination.getStyleClass().add("table-pagination");
+
+        ListView<String> list = new ListView<>();
         list.getStyleClass().add("admin-data-list");
         list.getStyleClass().add("admin-log-list");
-        list.setPrefHeight(540);
-        list.setMinHeight(360);
+        // Hauteur fixe - scroll sur la PAGE, pas dans la liste
+        list.setPrefHeight(PAGE_SIZE * 72.0 + 20);
+        list.setMinHeight(PAGE_SIZE * 72.0 + 20);
+        list.setMaxHeight(PAGE_SIZE * 72.0 + 20);
         list.setCellFactory(view -> new ListCell<>() {
             @Override
             protected void updateItem(String item, boolean empty) {
@@ -1554,6 +2309,25 @@ public class AdminDashboardView {
                 setText(null);
                 setGraphic(logRow(item));
             }
+        });
+
+        Runnable reloadLogs = () -> {
+            List<String> all = filteredLogs;
+            int pages = Math.max(1, (int) Math.ceil(all.size() / (double) PAGE_SIZE));
+            if (pagination.getPageCount() != pages) pagination.setPageCount(pages);
+            int idx = Math.min(pagination.getCurrentPageIndex(), pages - 1);
+            list.setItems(FXCollections.observableArrayList(
+                    all.subList(idx * PAGE_SIZE, Math.min(idx * PAGE_SIZE + PAGE_SIZE, all.size()))));
+        };
+
+        reloadLogs.run();
+        pagination.currentPageIndexProperty().addListener((o, old, val) -> reloadLogs.run());
+
+        search.textProperty().addListener((observable, oldValue, value) -> {
+            String needle = value == null ? "" : value.trim().toLowerCase();
+            filteredLogs.setPredicate(log -> needle.isBlank() || log.toLowerCase().contains(needle));
+            pagination.setCurrentPageIndex(0);
+            reloadLogs.run();
         });
 
         Button refresh = Ui.secondary("Refresh");
@@ -1576,9 +2350,13 @@ public class AdminDashboardView {
         toolbar.getStyleClass().add("admin-log-toolbar");
         HBox.setHgrow(search, Priority.ALWAYS);
 
+        BorderPane listShell = new BorderPane(list);
+        listShell.setBottom(pagination);
+        BorderPane.setMargin(pagination, new Insets(8, 0, 0, 0));
+
         VBox body = new VBox(16,
                 summary,
-                surfaceCard(sectionTitle("Live activity", "Filter, review and export recent events with a cleaner admin flow.", "A"), toolbar, list)
+                surfaceCard(sectionTitle("Live activity", "Filter, review and export recent events with a cleaner admin flow.", "A"), toolbar, listShell)
         );
         setContent("System logs", body);
     }
@@ -1877,7 +2655,12 @@ public class AdminDashboardView {
         chart.setLegendVisible(true);
         chart.setTitle(null);
         controller.products("").stream()
-                .collect(java.util.stream.Collectors.groupingBy(Product::getCategoryName, java.util.stream.Collectors.counting()))
+                .collect(java.util.stream.Collectors.groupingBy(
+                        product -> product.getCategoryName() == null || product.getCategoryName().isBlank()
+                                ? "Uncategorized"
+                                : product.getCategoryName(),
+                        java.util.stream.Collectors.counting()
+                ))
                 .forEach((category, count) -> chart.getData().add(new PieChart.Data(category == null ? "Uncategorized" : category, count)));
         return chart;
     }
@@ -1908,7 +2691,7 @@ public class AdminDashboardView {
     }
 
     private void productDialog(Product product) {
-        // 1. Déclaration et initialisation des champs (Résout "Cannot resolve symbol")
+        // 1. D-claration et initialisation des champs (R-sout "Cannot resolve symbol")
         TextField name = Ui.text("Product Name");
         TextField description = Ui.text("Description");
         TextField imageUrl = Ui.text("Image URL or /images/... path");
@@ -1920,7 +2703,7 @@ public class AdminDashboardView {
         category.setPromptText("Select Category");
         category.setMaxWidth(Double.MAX_VALUE);
 
-// Assurez-vous d'ajouter cette classe pour qu'elle récupère les styles de bordure/padding de votre CSS
+// Assurez-vous d'ajouter cette classe pour qu'elle r-cup-re les styles de bordure/padding de votre CSS
         category.getStyleClass().add("combo-box");
 
         // Style commun pour les inputs
@@ -1982,8 +2765,9 @@ public class AdminDashboardView {
 
                 dialogActions(save)
         );
+        form.getStyleClass().add("admin-product-dialog-card");
 
-        showAdminDialog(form);
+        showAdminDialog(form, product == null ? "New product" : "Edit product", true);
     }
 
     private void categoryDialog() {
@@ -2002,7 +2786,7 @@ public class AdminDashboardView {
                 dialogField("Category name", name),
                 dialogActions(create)
         );
-        showAdminDialog(form);
+        showAdminDialog(form, "New category", true);
     }
 
     private void createStockManagerDialog() {
@@ -2014,12 +2798,23 @@ public class AdminDashboardView {
         create.setOnAction(e -> {
             try {
                 String token = controller.createStockManager(name.getText(), email.getText());
-                Ui.info("Stock manager created", "Activation email sent. Token: " + token);
                 if (create.getScene() != null) {
                     create.getScene().getWindow().hide();
                 }
+                modernPopup(
+                        "Account Created",
+                        "Activation email sent successfully.",
+                        true
+                );
             } catch (MessagingException | RuntimeException ex) {
-                Ui.error(ex);
+                if (create.getScene() != null) {
+                    create.getScene().getWindow().hide();
+                }
+                modernPopup(
+                        "Email Already Exists",
+                        "This email is already used.",
+                        false
+                );
             }
         });
         VBox form = dialogForm(
@@ -2028,14 +2823,62 @@ public class AdminDashboardView {
                 dialogField("Email address", email),
                 dialogActions(create)
         );
-        showAdminDialog(form);
+        showAdminDialog(form, "Create stock manager", true);
     }
 
-    private void updateUser(TableView<User> table, UserStatus status) {
+    private void modernPopup(String title, String message, boolean success) {
+
+        Alert alert = new Alert(
+                success ? Alert.AlertType.INFORMATION : Alert.AlertType.ERROR
+        );
+
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+
+        DialogPane dialogPane = alert.getDialogPane();
+
+        dialogPane.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-background-radius: 18px;" +
+                        "-fx-border-radius: 18px;" +
+                        "-fx-padding: 20;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 20, 0.2, 0, 5);"
+        );
+
+        Label content = (Label) dialogPane.lookup(".content.label");
+
+        content.setStyle(
+                "-fx-font-size: 14px;" +
+                        "-fx-text-fill: #475569;" +
+                        "-fx-padding: 10 0 10 0;"
+        );
+
+        Button okButton = (Button) dialogPane.lookupButton(ButtonType.OK);
+
+        okButton.setText("Close");
+
+        okButton.setStyle(
+                "-fx-background-color: " + (success ? "#2563eb" : "#ef4444") + ";" +
+                        "-fx-text-fill: white;" +
+                        "-fx-font-size: 13px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-background-radius: 10px;" +
+                        "-fx-padding: 8 22;" +
+                        "-fx-cursor: hand;"
+        );
+
+        alert.showAndWait();
+    }
+
+    private void updateUser(TableView<User> table, UserStatus status,
+                            List<User>[] src, Pagination pagination, Runnable reload) {
         User user = table.getSelectionModel().getSelectedItem();
         if (user != null) {
             run(() -> controller.updateUserStatus(user, status));
-            table.setItems(FXCollections.observableArrayList(controller.users()));
+            src[0] = controller.users();
+            pagination.setCurrentPageIndex(0);
+            reload.run();
         }
     }
 
@@ -2050,50 +2893,74 @@ public class AdminDashboardView {
         root.setCenter(scrollPane);
     }
 
+    private void setReportContent(javafx.scene.Node content) {
+        VBox page = new VBox(10, Ui.header(controller.currentUser(), "Reports"), content);
+        page.setPadding(new Insets(22, 4, 22, 4));
+        page.getStyleClass().add("admin-report-dark-shell");
+        VBox.setVgrow(content, Priority.ALWAYS);
+
+        ScrollPane scrollPane = new ScrollPane(page);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(false);
+        scrollPane.getStyleClass().addAll("admin-page-scroll", "admin-report-dark-scroll");
+        root.setCenter(scrollPane);
+    }
+
     private void showAdminDialog(VBox form) {
+        showAdminDialog(form, null, false);
+    }
+
+    private void showAdminDialog(VBox form, String title, boolean nativeChrome) {
         Stage stage = new Stage();
         Window owner = root.getScene().getWindow();
         stage.initOwner(owner);
         stage.initModality(Modality.APPLICATION_MODAL);
-        stage.initStyle(StageStyle.TRANSPARENT);
+        if (nativeChrome) {
+            stage.setTitle(title == null || title.isBlank() ? "Dialog" : title);
+        } else {
+            stage.initStyle(StageStyle.TRANSPARENT);
+        }
 
-        // 1. Bouton de fermeture (déjà configuré dans votre CSS)
-        Button close = new Button("✕");
-        close.getStyleClass().add("admin-dialog-close");
-        close.setOnAction(e -> stage.close());
+        if (!nativeChrome) {
+            // 1. Bouton de fermeture (d-j- configur- dans votre CSS)
+            Button close = new Button("X");
+            close.getStyleClass().add("admin-dialog-close");
+            close.setOnAction(e -> stage.close());
 
-        HBox chrome = new HBox(close);
-        chrome.setAlignment(Pos.TOP_RIGHT);
+            HBox chrome = new HBox(close);
+            chrome.getStyleClass().add("admin-dialog-chrome");
+            chrome.setAlignment(Pos.TOP_RIGHT);
 
-        // 2. On ajoute le bouton au formulaire existant (qui a déjà la classe .admin-dialog-card)
-        form.getChildren().add(0, chrome);
+            // 2. On ajoute le bouton au formulaire existant (qui a d-j- la classe .admin-dialog-card)
+            form.getChildren().add(0, chrome);
+        }
         form.setMinWidth(680);
         form.setMaxWidth(680);
 
         // 3. Un SEUL ScrollPane pour tout le contenu
-        // On enlève les prefViewportHeight/Width qui forcent la boîte grise
+        // On enl-ve les prefViewportHeight/Width qui forcent la bo-te grise
         ScrollPane modalScroll = new ScrollPane(form);
         modalScroll.setFitToWidth(true);
         modalScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         modalScroll.getStyleClass().add("admin-dialog-scroll");
 
-        // Limite la hauteur totale à 90% de la fenêtre pour éviter que ça sorte de l'écran
+        // Limite la hauteur totale - 90% de la fen-tre pour -viter que -a sorte de l'-cran
         modalScroll.setMaxHeight(owner.getHeight() * 0.9);
 
         // 4. Le Shell (fond sombre/transparent)
         StackPane shell = new StackPane(modalScroll);
         shell.getStyleClass().add("admin-dialog-shell");
         shell.setAlignment(Pos.CENTER);
-        // Un padding léger pour que l'ombre de la carte blanche ne soit pas coupée
-        shell.setPadding(new Insets(40));
+        // Un padding l-ger pour que l'ombre de la carte blanche ne soit pas coup-e
+        shell.setPadding(nativeChrome ? new Insets(0) : new Insets(40));
 
         Scene scene = new Scene(shell);
-        scene.setFill(Color.TRANSPARENT);
+        scene.setFill(nativeChrome ? Color.WHITE : Color.TRANSPARENT);
         AppTheme.apply(scene);
 
         stage.setScene(scene);
 
-        // Centrage parfait sur la fenêtre principale
+        // Centrage parfait sur la fen-tre principale
         stage.setOnShown(e -> {
             stage.setX(owner.getX() + (owner.getWidth() - stage.getWidth()) / 2);
             stage.setY(owner.getY() + (owner.getHeight() - stage.getHeight()) / 2);
@@ -2109,12 +2976,6 @@ public class AdminDashboardView {
     }
 
     private VBox dialogSection(String title, String subtitle) {
-        Label overline = new Label("ADMIN FORM");
-        overline.getStyleClass().add("admin-dialog-overline");
-        Label badge = new Label("NEW");
-        badge.getStyleClass().add("admin-dialog-badge");
-        HBox top = new HBox(10, overline, badge);
-        top.setAlignment(Pos.CENTER_LEFT);
         Label heading = new Label(title);
         heading.getStyleClass().add("admin-dialog-title");
         heading.setWrapText(true);
@@ -2124,7 +2985,7 @@ public class AdminDashboardView {
         Region line = new Region();
         line.getStyleClass().add("admin-dialog-divider");
         line.setPrefHeight(1);
-        return new VBox(8, top, heading, copy, line);
+        return new VBox(8, heading, copy, line);
     }
 
     private VBox dialogField(String labelText, javafx.scene.Node field) {
@@ -2324,7 +3185,7 @@ public class AdminDashboardView {
 
         String[] lines = rawReport.split("\n");
 
-        // ── Summary table ─────────────────────────────────────────
+        // -- Summary table -----------------------------------------
         List<String[]> summaryRows = new ArrayList<>();
         for (String line : lines) {
             String trimmed = line.trim();
@@ -2379,7 +3240,7 @@ public class AdminDashboardView {
             container.getChildren().addAll(summaryHeader, summaryTable);
         }
 
-        // ── Inventory table ───────────────────────────────────────
+        // -- Inventory table ---------------------------------------
         List<String[]> inventoryRows = new ArrayList<>();
         boolean inInventory = false;
 
@@ -2410,7 +3271,7 @@ public class AdminDashboardView {
             inventoryTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
 
             TableColumn<String[], String> nameCol = new TableColumn<>("Product");
-            nameCol.setPrefWidth(400);
+            nameCol.setPrefWidth(350);
             nameCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[0]));
             nameCol.setCellFactory(c -> new TableCell<>() {
                 @Override protected void updateItem(String item, boolean empty) {
@@ -2424,7 +3285,7 @@ public class AdminDashboardView {
             });
 
             TableColumn<String[], String> catCol = new TableColumn<>("Category");
-            catCol.setPrefWidth(160);
+            catCol.setPrefWidth(180);
             catCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[1]));
             catCol.setCellFactory(c -> new TableCell<>() {
                 @Override protected void updateItem(String item, boolean empty) {
@@ -2463,14 +3324,33 @@ public class AdminDashboardView {
             });
 
             inventoryTable.getColumns().addAll(nameCol, catCol, qtyCol, priceCol);
-            inventoryTable.setItems(FXCollections.observableArrayList(inventoryRows));
-            inventoryTable.setPrefHeight(350);
-            inventoryTable.setMinHeight(350);
-            VBox.setVgrow(inventoryTable, Priority.ALWAYS);
+
+            // -- Pagination comme les autres pages --------------------
+            double rowH = 52;
+            inventoryTable.setPrefHeight(PAGE_SIZE * rowH + 58);
+            inventoryTable.setMinHeight(PAGE_SIZE * rowH + 58);
+            inventoryTable.setMaxHeight(PAGE_SIZE * rowH + 58);
+
+            Pagination inventoryPagination = new Pagination();
+            inventoryPagination.getStyleClass().add("table-pagination");
+
+            Runnable reloadInventory = () -> {
+                int pages = Math.max(1, (int) Math.ceil(inventoryRows.size() / (double) PAGE_SIZE));
+                if (inventoryPagination.getPageCount() != pages) inventoryPagination.setPageCount(pages);
+                int idx = Math.min(inventoryPagination.getCurrentPageIndex(), pages - 1);
+                inventoryTable.setItems(FXCollections.observableArrayList(
+                        inventoryRows.subList(idx * PAGE_SIZE, Math.min(idx * PAGE_SIZE + PAGE_SIZE, inventoryRows.size()))));
+            };
+            reloadInventory.run();
+            inventoryPagination.currentPageIndexProperty().addListener((o, old, val) -> reloadInventory.run());
+
+            BorderPane inventoryShell = new BorderPane(inventoryTable);
+            inventoryShell.setBottom(inventoryPagination);
+            BorderPane.setMargin(inventoryPagination, new Insets(8, 0, 0, 0));
 
             Label inventoryHeader = new Label("INVENTORY");
             inventoryHeader.getStyleClass().add("admin-report-group-header");
-            container.getChildren().addAll(inventoryHeader, inventoryTable);
+            container.getChildren().addAll(inventoryHeader, inventoryShell);
         }
 
         return container;
