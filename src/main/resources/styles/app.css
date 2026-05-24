@@ -2785,6 +2785,7 @@
 .dash-product-table-row {
     -fx-padding: 11 12;
     -fx-border-color: transparent transparent #edf2f7 transparent;
+    -fx-min-height: 48px;
 }
 
 .dash-product-cell-name {

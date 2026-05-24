@@ -411,6 +411,8 @@ public class AdminDashboardView {
         HBox bottomRow = new HBox(16, activityCard, productsCard);
         HBox.setHgrow(activityCard, Priority.ALWAYS);
         HBox.setHgrow(productsCard, Priority.ALWAYS);
+        productsCard.setMinWidth(430);
+        productsCard.setPrefWidth(470);
 
         VBox body = new VBox(18, kpiRow, analyticsRow, bottomRow);
         body.getStyleClass().add("dash-body");
@@ -621,6 +623,9 @@ public class AdminDashboardView {
         Label name = new Label(product.getName());
         name.getStyleClass().add("dash-product-cell-name");
         name.setPrefWidth(220);
+        name.setMaxWidth(220);
+        name.setWrapText(false);
+        name.setTextOverrun(javafx.scene.control.OverrunStyle.CLIP);
 
         Label stock = new Label(String.valueOf(product.getQuantity()));
         stock.getStyleClass().add("dash-product-cell");
@@ -633,6 +638,8 @@ public class AdminDashboardView {
         Label status = new Label(product.getQuantity() < 10 ? "Low Stock" : "In Stock");
         status.getStyleClass().addAll("dash-stock-badge", product.getQuantity() < 10 ? "dash-badge-low" : "dash-badge-ok");
         status.setPrefWidth(100);
+        status.setMaxWidth(100);
+        status.setTextOverrun(javafx.scene.control.OverrunStyle.CLIP);
 
         HBox row = new HBox(name, stock, price, status);
         row.getStyleClass().add("dash-product-table-row");
