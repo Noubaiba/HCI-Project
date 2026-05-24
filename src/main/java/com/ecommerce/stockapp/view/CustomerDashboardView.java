@@ -1398,10 +1398,18 @@ public class CustomerDashboardView {
 
             // 3. FILTRER les données
             container.getChildren().clear();
+
             for (Order o : allOrders) {
-                if (text.equals("Toutes") || o.getStatus().toString().equalsIgnoreCase(text)) {
+                if (text.equals("Toutes") ||
+                        (o.getStatus() != null && o.getStatus().name().equalsIgnoreCase(text))) {
                     container.getChildren().add(createOrderRow(o));
                 }
+            }
+
+            if (container.getChildren().isEmpty()) {
+                Label empty = new Label("Aucune commande avec le statut " + text);
+                empty.setStyle("-fx-text-fill: #1a237e; -fx-font-size: 16px; -fx-font-weight: bold;");
+                container.getChildren().add(empty);
             }
         });
 
@@ -1443,6 +1451,8 @@ public class CustomerDashboardView {
                 createFilterButton("Toutes", true, orders, ordersList, filterBox),
                 createFilterButton("PAID", false, orders, ordersList, filterBox),
                 createFilterButton("PENDING", false, orders, ordersList, filterBox),
+                createFilterButton("PROCESSING", false, orders, ordersList, filterBox),
+                createFilterButton("SHIPPED", false, orders, ordersList, filterBox),
                 createFilterButton("DELIVERED", false, orders, ordersList, filterBox),
                 createFilterButton("CANCELLED", false, orders, ordersList, filterBox)
         );
