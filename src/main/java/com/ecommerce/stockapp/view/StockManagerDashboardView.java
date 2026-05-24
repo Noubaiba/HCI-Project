@@ -762,10 +762,18 @@ public class StockManagerDashboardView {
         card.getStyleClass().add("role-profile-main-card");
         card.setMaxWidth(980);
 
-        VBox body = new VBox(card);
+        Button logout = profileLogoutButton(controller::logout);
+        VBox body = new VBox(20, card, logout);
         body.setAlignment(Pos.TOP_CENTER);
         body.setPadding(new Insets(12, 0, 40, 0));
         setProfileContent("VOTRE PROFIL", body);
+    }
+
+    private Button profileLogoutButton(Runnable action) {
+        Button logout = new Button("Logout");
+        logout.getStyleClass().add("role-profile-logout");
+        logout.setOnAction(e -> action.run());
+        return logout;
     }
 
     private HBox profileMenuRow(String title, String subtitle, String iconText, Runnable action) {

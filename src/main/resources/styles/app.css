@@ -4620,6 +4620,19 @@
     -fx-background-color: #115e59;
 }
 
+.role-profile-logout {
+    -fx-background-color: transparent;
+    -fx-text-fill: #94a3b8;
+    -fx-font-size: 13px;
+    -fx-font-weight: 900;
+    -fx-padding: 22 35 35 35;
+    -fx-cursor: hand;
+}
+
+.role-profile-logout:hover {
+    -fx-text-fill: #ef4444;
+}
+
 .role-profile-password-save {
     -fx-background-color: #ef4444;
     -fx-text-fill: white;

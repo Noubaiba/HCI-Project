@@ -1226,7 +1226,7 @@ public class CustomerDashboardView {
         });
 
         paymentStage.setTitle("Paiement Sécurisé");
-        paymentStage.setScene(new Scene(webView, 450, 650));
+        paymentStage.setScene(new Scene(webView, 450, 600));
         paymentStage.show();
     }
 
