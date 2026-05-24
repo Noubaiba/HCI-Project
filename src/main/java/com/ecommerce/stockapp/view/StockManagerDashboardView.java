@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import javafx.application.Platform;
 
 public class StockManagerDashboardView {
 
@@ -430,7 +431,8 @@ public class StockManagerDashboardView {
 
         // Product (name + SKU)
         TableColumn<Product, String> nameCol = new TableColumn<>("Product");
-        nameCol.setMinWidth(390);
+        nameCol.setMinWidth(330);
+        nameCol.setPrefWidth(430);
         nameCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getName()));
         nameCol.setCellFactory(col -> new TableCell<>() {
             @Override protected void updateItem(String item, boolean empty) {
@@ -441,7 +443,7 @@ public class StockManagerDashboardView {
                 nm.setWrapText(true);
                 nm.getStyleClass().add("cell-name");
                 Label sku = new Label("SKU #" + String.format("%06d", p.getId())); sku.getStyleClass().add("cell-sub");
-                nm.setMaxWidth(450);
+                nm.setMaxWidth(360);
                 VBox text = new VBox(3, nm, sku);
                 HBox row = new HBox(text);
                 HBox.setHgrow(text, Priority.ALWAYS);
@@ -453,26 +455,64 @@ public class StockManagerDashboardView {
         // Category pill
         TableColumn<Product, String> catCol = new TableColumn<>("Category");
         catCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getCategoryName()));
-        catCol.setMaxWidth(170); catCol.setMinWidth(150);
+        catCol.setMinWidth(180);
+        catCol.setPrefWidth(220);
+        catCol.setMaxWidth(220);
+
+        catCol.setStyle("-fx-alignment: CENTER;");
+
         catCol.setCellFactory(col -> new TableCell<>() {
-            @Override protected void updateItem(String item, boolean empty) {
+            @Override
+            protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) { setGraphic(null); setText(null); return; }
+
+                if (empty || item == null) {
+                    setGraphic(null);
+                    setText(null);
+                    return;
+                }
+
                 Label pill = new Label(item);
                 pill.getStyleClass().addAll("category-pill", categoryStyle(item));
-                setGraphic(pill); setText(null);
+                pill.setAlignment(Pos.CENTER);
+
+                HBox box = new HBox(pill);
+                box.setAlignment(Pos.CENTER);
+
+                setAlignment(Pos.CENTER);
+                setGraphic(box);
+                setText(null);
             }
         });
 
         // Price
+        // Price
         TableColumn<Product, String> priceCol = new TableColumn<>("Price");
         priceCol.setCellValueFactory(d -> new SimpleStringProperty("$" + d.getValue().getPrice()));
-        priceCol.setMaxWidth(100); priceCol.setMinWidth(80);
+
+        priceCol.setMinWidth(130);
+        priceCol.setPrefWidth(150);
+        priceCol.setMaxWidth(180);
+        priceCol.setStyle("-fx-alignment: CENTER;");
+
         priceCol.setCellFactory(col -> new TableCell<>() {
-            @Override protected void updateItem(String item, boolean empty) {
+            @Override
+            protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) { setText(null); return; }
-                setText(item); getStyleClass().add("cell-price");
+
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                    return;
+                }
+
+                setAlignment(Pos.CENTER);
+                setText(item);
+                setGraphic(null);
+
+                if (!getStyleClass().contains("cell-price")) {
+                    getStyleClass().add("cell-price");
+                }
             }
         });
 
@@ -508,7 +548,7 @@ public class StockManagerDashboardView {
 
         // Actions
         TableColumn<Product, Void> actCol = new TableColumn<>("Actions");
-        actCol.setMaxWidth(130); actCol.setMinWidth(100);
+        actCol.setMaxWidth(150); actCol.setMinWidth(120);
         actCol.setCellFactory(col -> new TableCell<>() {
             private final Button edit = makeIconBtn("✎", "Edit product");
             private final Button del  = makeIconBtn("×", "Delete product");
@@ -539,17 +579,17 @@ public class StockManagerDashboardView {
     private String categoryStyle(String category) {
         if (category == null || category.isBlank()) return "category-pill-blue";
         return switch (category.trim()) {
-            case "Accessoires"  -> "category-pill-amber";
-            case "Electronics"  -> "category-pill-purple";
-            case "Ensembles"    -> "category-pill-teal";
-            case "Fashion"      -> "category-pill-pink";
-            case "Home"         -> "category-pill-green";
-            case "Lingerie"     -> "category-pill-rose";
-            case "Office"       -> "category-pill-indigo";
-            case "Pantalons"    -> "category-pill-orange";
-            case "Robes"        -> "category-pill-cyan";
-            case "Sports"       -> "category-pill-lime";
-            case "Tops & T-shirts" -> "category-pill-blue";
+            case "Beauté & Santé"  -> "category-pill-amber";
+            case "Bébé & Jouets"  -> "category-pill-purple";
+            case "Électroménager"    -> "category-pill-teal";
+            case "Informatique"      -> "category-pill-pink";
+            case "Jeux vidéos "         -> "category-pill-green";
+            case "Maison"     -> "category-pill-rose";
+            case "Sports & Loisirs"       -> "category-pill-indigo";
+            case "Supermarché"    -> "category-pill-orange";
+            case "Téléphone & Tablette"        -> "category-pill-cyan";
+            case "TV & HIGH TECH"       -> "category-pill-lime";
+            case "Vêtements & Chaussures" -> "category-pill-blue";
             default             -> "category-pill-blue";
         };
     }
@@ -567,11 +607,6 @@ public class StockManagerDashboardView {
         if (qty >= 60) return "qty-green";
         return "qty-blue";
     }
-
-    // ═══════════════════════════════════════════════
-    //  LOW STOCK PAGE
-    // ═══════════════════════════════════════════════
-
     private void showLowStock() {
         selectNav("Low Stock");
         List<Product> lowProducts = controller.lowStock();
@@ -582,6 +617,7 @@ public class StockManagerDashboardView {
         );
 
         long out = lowProducts.stream().filter(p -> p.getQuantity() == 0).count();
+
         HBox overview = new HBox(16,
                 statCard("Alert products", String.valueOf(lowProducts.size()), "Needs review", "badge-amber"),
                 statCard("Out of stock", String.valueOf(out), out > 0 ? "Urgent" : "Clear", out > 0 ? "badge-red" : "badge-green"),
@@ -589,37 +625,75 @@ public class StockManagerDashboardView {
         );
         overview.getStyleClass().add("stats-row");
 
-        FlowPane alerts = new FlowPane(16, 16);
-        alerts.getStyleClass().add("low-stock-content");
+        GridPane alerts = new GridPane();
+        alerts.setHgap(16);
+        alerts.setVgap(16);
         alerts.setPadding(new Insets(18, 28, 24, 28));
+        alerts.getStyleClass().add("low-stock-content");
+
+        ColumnConstraints col1 = new ColumnConstraints();
+        col1.setPercentWidth(33.333);
+
+        ColumnConstraints col2 = new ColumnConstraints();
+        col2.setPercentWidth(33.333);
+
+        ColumnConstraints col3 = new ColumnConstraints();
+        col3.setPercentWidth(33.333);
+
+        alerts.getColumnConstraints().addAll(col1, col2, col3);
 
         if (lowProducts.isEmpty()) {
             Label emptyTitle = new Label("Stock health is good");
             emptyTitle.getStyleClass().add("empty-title");
+
             Label emptyCopy = new Label("No product needs restock right now.");
             emptyCopy.getStyleClass().add("empty-copy");
+
             VBox empty = new VBox(8, emptyTitle, emptyCopy);
             empty.getStyleClass().add("empty-state-card");
-            alerts.getChildren().add(empty);
+
+            alerts.add(empty, 0, 0, 3, 1);
+        } else {
+            int index = 0;
+
+            for (Product p : lowProducts) {
+                Label cat = new Label(p.getCategoryName());
+                cat.getStyleClass().add("category-pill");
+
+                Label name = new Label(p.getName());
+                name.getStyleClass().add("cell-name");
+                name.setWrapText(true);
+
+                Label sku = new Label("SKU #" + String.format("%06d", p.getId()));
+                sku.getStyleClass().add("cell-sub");
+
+                Label qty = new Label(p.getQuantity() == 0 ? "Out of stock" : "Only " + p.getQuantity() + " left");
+                qty.getStyleClass().addAll(
+                        "alert-status",
+                        p.getQuantity() == 0 ? "alert-status-red" : "alert-status-amber"
+                );
+
+                Button add = styledBtn("+ Add stock", "btn-secondary");
+                Button adjust = styledBtn("Adjust", "btn-secondary");
+
+                add.setOnAction(e -> stockDialog(p, false, this::showLowStock));
+                adjust.setOnAction(e -> stockDialog(p, true, this::showLowStock));
+
+                HBox actions = new HBox(8, add, adjust);
+
+                VBox card = new VBox(10, cat, name, sku, qty, actions);
+                card.getStyleClass().add("alert-card");
+
+                card.setMaxWidth(Double.MAX_VALUE);
+                GridPane.setFillWidth(card, true);
+
+                int col = index % 3;
+                int row = index / 3;
+
+                alerts.add(card, col, row);
+                index++;
+            }
         }
-
-        lowProducts.forEach(p -> {
-            Label cat  = new Label(p.getCategoryName()); cat.getStyleClass().add("category-pill");
-            Label name = new Label(p.getName());          name.getStyleClass().add("cell-name"); name.setWrapText(true);
-            Label sku  = new Label("SKU #" + String.format("%06d", p.getId())); sku.getStyleClass().add("cell-sub");
-            Label qty  = new Label(p.getQuantity() == 0 ? "Out of stock" : "Only " + p.getQuantity() + " left");
-            qty.getStyleClass().addAll("alert-status", p.getQuantity() == 0 ? "alert-status-red" : "alert-status-amber");
-
-            Button add = styledBtn("+ Add stock", "btn-secondary");
-            Button adjust = styledBtn("Adjust", "btn-secondary");
-            add.setOnAction(e -> stockDialog(p, false, this::showLowStock));
-            adjust.setOnAction(e -> stockDialog(p, true, this::showLowStock));
-
-            HBox actions = new HBox(8, add, adjust);
-            VBox card = new VBox(10, cat, name, sku, qty, actions);
-            card.getStyleClass().add("alert-card");
-            alerts.getChildren().add(card);
-        });
 
         VBox content = new VBox(0, topbar, overview, alerts);
         content.getStyleClass().add("main-content");
@@ -628,7 +702,36 @@ public class StockManagerDashboardView {
         scroll.getStyleClass().add("manager-page-scroll");
         scroll.setFitToWidth(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+
         root.setCenter(scroll);
+    }
+
+    private void resizeLowStockCards(FlowPane alerts) {
+        double availableWidth = alerts.getWidth();
+
+        if (availableWidth <= 0) {
+            return;
+        }
+
+        double hGap = alerts.getHgap();
+        Insets padding = alerts.getPadding();
+
+        double leftRightPadding = padding.getLeft() + padding.getRight();
+
+        // 3 cartes par ligne = 2 espaces entre les cartes
+        double cardWidth = (availableWidth - leftRightPadding - (hGap * 2)) / 3;
+
+        // Largeur minimale pour éviter des cartes trop petites
+        cardWidth = Math.max(cardWidth, 220);
+
+        for (Node node : alerts.getChildren()) {
+            if (node instanceof VBox card && card.getStyleClass().contains("alert-card")) {
+                card.setPrefWidth(cardWidth);
+                card.setMinWidth(cardWidth);
+                card.setMaxWidth(cardWidth);
+            }
+        }
     }
 
     // ═══════════════════════════════════════════════

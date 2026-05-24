@@ -2783,9 +2783,9 @@
 }
 
 .dash-product-table-row {
-    -fx-padding: 11 12;
+    -fx-padding: 16 12;
     -fx-border-color: transparent transparent #edf2f7 transparent;
-    -fx-min-height: 48px;
+    -fx-min-height: 55px;
 }
 
 .dash-product-cell-name {
@@ -3893,15 +3893,15 @@
 .stock-manager-root .history-table .table-cell {
     -fx-padding: 10 18;
     -fx-cell-size: 72px;
-    -fx-alignment: CENTER_LEFT;
+    -fx-alignment: CENTER;
 }
 
 .stock-manager-root .history-table .column-header {
-    -fx-alignment: CENTER_LEFT;
+    -fx-alignment: CENTER;
 }
 
 .stock-manager-root .history-table .column-header .label {
-    -fx-alignment: CENTER_LEFT;
+    -fx-alignment: CENTER;
 }
 
 .stock-manager-root .wrap-cell-label {

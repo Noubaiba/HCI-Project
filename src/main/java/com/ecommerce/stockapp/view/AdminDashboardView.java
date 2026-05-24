@@ -411,8 +411,12 @@ public class AdminDashboardView {
         HBox bottomRow = new HBox(16, activityCard, productsCard);
         HBox.setHgrow(activityCard, Priority.ALWAYS);
         HBox.setHgrow(productsCard, Priority.ALWAYS);
-        productsCard.setMinWidth(430);
-        productsCard.setPrefWidth(470);
+        activityCard.setMinWidth(0);
+        productsCard.setMinWidth(0);
+        activityCard.setPrefWidth(0);
+        productsCard.setPrefWidth(0);
+        activityCard.setMaxWidth(Double.MAX_VALUE);
+        productsCard.setMaxWidth(Double.MAX_VALUE);
 
         VBox body = new VBox(18, kpiRow, analyticsRow, bottomRow);
         body.getStyleClass().add("dash-body");
@@ -597,9 +601,9 @@ public class AdminDashboardView {
         }
 
         HBox header = new HBox(
-                productTableHeader("Product", 220),
-                productTableHeader("Stock", 80),
-                productTableHeader("Price", 90),
+                productTableHeader("Product", 250),
+                productTableHeader("Stock", 70),
+                productTableHeader("Price", 105),
                 productTableHeader("Status", 100)
         );
         header.getStyleClass().add("dash-product-table-head");
@@ -622,18 +626,20 @@ public class AdminDashboardView {
     private HBox productTableRow(Product product) {
         Label name = new Label(product.getName());
         name.getStyleClass().add("dash-product-cell-name");
-        name.setPrefWidth(220);
-        name.setMaxWidth(220);
+        name.setPrefWidth(250);
+        name.setMaxWidth(250);
         name.setWrapText(false);
         name.setTextOverrun(javafx.scene.control.OverrunStyle.CLIP);
 
         Label stock = new Label(String.valueOf(product.getQuantity()));
         stock.getStyleClass().add("dash-product-cell");
-        stock.setPrefWidth(80);
+        stock.setPrefWidth(70);
 
         Label price = new Label(formatPrice(product.getPrice()));
         price.getStyleClass().add("dash-product-cell");
-        price.setPrefWidth(90);
+        price.setPrefWidth(105);
+        price.setMaxWidth(105);
+        price.setTextOverrun(javafx.scene.control.OverrunStyle.CLIP);
 
         Label status = new Label(product.getQuantity() < 10 ? "Low Stock" : "In Stock");
         status.getStyleClass().addAll("dash-stock-badge", product.getQuantity() < 10 ? "dash-badge-low" : "dash-badge-ok");
