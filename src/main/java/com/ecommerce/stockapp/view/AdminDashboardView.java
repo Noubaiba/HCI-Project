@@ -996,7 +996,7 @@ public class AdminDashboardView {
         table.getColumns().add(userEmailColumn());
         table.getColumns().add(userRoleColumn());
         table.getColumns().add(userStatusColumn());
-        table.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
 
         Pagination pagination = new Pagination();
         pagination.getStyleClass().add("table-pagination");

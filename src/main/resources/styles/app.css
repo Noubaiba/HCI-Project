@@ -904,6 +904,7 @@
 
 .admin-data-table .table-row-cell:filled:selected {
     -fx-background-color: #e8f0fb;
+    -fx-background-insets: 0;
 }
 
 .admin-data-table .table-cell {
